@@ -10,17 +10,23 @@ probably don't even need to think about installing the server separately.
 
 ## Quickstart
 
-You can install the Emacs client for traad via ``package.el``::
+You can install the Emacs client for traad via `package.el`:
 
-    M-x package-install<RET>traad
+```
+M-x package-install<RET>traad
+```
 
-Then you can use ``traad-install-server`` to install the Python server
-into a default location::
+Then you can use `traad-install-server` to install the Python server into a
+default location::
 
-    M-x traad-install-server
+```
+M-x traad-install-server
+```
 
-For more information on this process, see `the wiki
-<https://github.com/abingham/emacs-traad/wiki/installation>`_.
+For more information on this process, see
+[the wiki](https://github.com/abingham/emacs-traad/wiki/Home).
+
+For more information on using client, see [the Usage page in the wiki.](https://github.com/abingham/emacs-traad/wiki/Usage)
 
 ## Python 3 warning
 
