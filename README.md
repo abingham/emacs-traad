@@ -54,4 +54,4 @@ For more information on using client, see
 There is a
 [known problem with emacs-request](https://github.com/tkf/emacs-request/pull/15)
 that makes the traad emacs client misbehave when using Python3. You can fix this
-by patching `request.el`.
+by [patching `request.el`](https://github.com/tkf/emacs-request/pull/15/files).
