@@ -48,10 +48,3 @@ in [the wiki](https://github.com/abingham/emacs-traad/wiki).
 For more information on using client, see
 [the Usage page](https://github.com/abingham/emacs-traad/wiki/Usage) in
 [the wiki](https://github.com/abingham/emacs-traad/wiki).
-
-## Python 3 warning
-
-There is a
-[known problem with emacs-request](https://github.com/tkf/emacs-request/pull/15)
-that makes the traad emacs client misbehave when using Python3. You can fix this
-by [patching `request.el`](https://github.com/tkf/emacs-request/pull/15/files).
