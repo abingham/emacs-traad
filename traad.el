@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.9
 ;; URL: https://github.com/abingham/traad
-;; Package-Requires: ((deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (python-environment "0.0.2"))
+;; Package-Requires: ((deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -66,9 +66,9 @@
 (require 'deferred)
 (require 'json)
 (require 'popup)
-(require 'python-environment)
 (require 'request)
 (require 'request-deferred)
+(require 'virtualenvwrapper)
 
 					; TODO: Call
 					; update-history-buffer as
@@ -88,7 +88,7 @@
   :group 'traad)
 
 (defcustom traad-server-program nil
-  "The name of the traad server program. 
+  "The name of the traad server program.
 
 If this is nil (default) then the server found in the
 `traad-environment-name' virtual environment is used.
@@ -98,7 +98,7 @@ Note that for python3 projects this commonly needs to be set to `traad3'."
   :group 'traad)
 
 (defcustom traad-server-port 0
-  "Port on which the traad server will listen. 
+  "Port on which the traad server will listen.
 
 0 means any available port."
   :type '(number)
@@ -123,7 +123,7 @@ after successful refactorings."
 (defconst traad-required-protocol-version 2
   "The required protocol version.")
 
-(defcustom traad-environment-root "traad"
+(defcustom traad-environment-name "traad"
   "The name of the Python environment containing the traad server to use.
 
 When `traad-install-server' runs, it uses this variable to
@@ -132,7 +132,7 @@ determine where to install the server.
 When `traad-server-program' is nil, this variable is used to
 determine where the traad server program is installed.
 
-This name is used by `python-environment.el' to locate the
+This name is used by `virtualenvwrapper.el' to locate the
 virtual environment into which the desired version of traad is
 installed.  If you have multiple traads in different virtual
 environment (e.g. one for Python 2 and one for Python 3) then you
@@ -140,19 +140,14 @@ may need to dynamically alter this variable to select the one you
 want to use."
   :group 'traad)
 
-(defcustom traad-environment-virtualenv nil
-  "``virtualenv`` command to use.  A list of string.
-
-If nil, `python-environment-virtualenv' is used instead."
-  :group 'traad)
-
 (defun traad--server-command ()
   "Get the command to launch the server."
   (or traad-server-program
-      (let* ((get-bin (lambda (x) (python-environment-bin x traad-environment-root)))
-             (script (or (funcall get-bin "traad")
-                         (funcall get-bin "traad3"))))
-        (when script (list script)))))
+      (venv-with-virtualenv
+       traad-environment-name
+       (let ((script (or (funcall 'executable-find "traad")
+                         (funcall 'executable-find "traad3"))))
+         (when script (list script))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; open-close
@@ -316,9 +311,9 @@ undone."
    (list
     (read-number "Index: " 0)))
   (lexical-let ((data (list (cons "index" idx))))
-    
+
     (deferred:$
-      
+
       (traad-deferred-request
        "/history/undo"
        :data data
@@ -338,14 +333,14 @@ redone."
    (list
     (read-number "Index: " 0)))
   (lexical-let ((data (list (cons "index" idx))))
-    
+
     (deferred:$
-      
+
       (traad-deferred-request
        "/history/redo"
        :data data
        :type "POST")
-      
+
       (deferred:nextc it
 	(lambda (rsp) (message "Redo"))))))
 
@@ -652,7 +647,7 @@ current buffer.
     (deferred:$
 					; Fetch in parallel...
       (deferred:parallel
-	
+
 					; ...the occurrence data...
 	(deferred:$
 	  (apply func (list pos))
@@ -660,7 +655,7 @@ current buffer.
 	    'request-response-data)
 	  (deferred:nextc it
 	    (lambda (x) (assoc-default 'data x))))
-	
+
 					; ...and the project root.
 	(deferred:$
 	  (traad-get-root)
@@ -668,7 +663,7 @@ current buffer.
 	    'request-response-data)
 	  (deferred:nextc it
 	    (lambda (x) (assoc-default 'root x)))))
-      
+
       (deferred:nextc it
 	(lambda (input)
 	  (let ((locs (elt input 0)) ; the location vector
@@ -677,7 +672,7 @@ current buffer.
 		(inhibit-read-only 't))
 	    (pop-to-buffer buff)
 	    (erase-buffer)
-	    
+
 					; For each location, add a
 					; line to the buffer.  TODO:
 					; Is there a "dovector" we can
@@ -732,7 +727,7 @@ current buffer."
 	  'request-response-data)
 	(deferred:nextc it
 	  (lambda (x) (assoc-default 'root x)))))
-    
+
     (deferred:nextc it
       (lambda (input)
 	(let ((loc (elt input 0)))
@@ -916,7 +911,7 @@ task_id field in the response."
   (lexical-let ((data data)
 		(name name))
     (deferred:$
-      
+
       (traad-deferred-request
        location
        :type "POST"
@@ -951,24 +946,23 @@ task_id field in the response."
 
 					; TODO: invalidation support?
 
-(defconst traad-install-server--command
-  `("pip" "install" "--upgrade" "traad"))
+(defconst traad--install-server-command
+  "pip install --upgrade traad")
 
 (defun traad-install-server ()
-  "Install traad. 
+  "Install traad.
 
-This installs the server into the `traad-environment-root'
-virtual environment using `traad-environment-virtualenv' to
-create the virtualenv if necessary.  Manipulate these two variable
-to create multiple installations of traad if needed.
+This installs the server into the `traad-environment-name'
+virtual environment, creating the virtualenv if necessary.
 
 By default, then, it installs traad into
 `PYTHON-ENVIRONMENT_DIRECTORY/traad`."
   (interactive)
-  (deferred:$
-    (python-environment-run traad-install-server--command
-                            traad-environment-root
-                            traad-environment-virtualenv)))
+  (ignore-errors
+   (venv-mkvirtualenv traad-environment-name))
+  (venv-with-virtualenv-shell-command
+   traad-environment-name
+   traad--install-server-command))
 
 (provide 'traad)
 
