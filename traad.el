@@ -949,6 +949,7 @@ task_id field in the response."
 (defconst traad--install-server-command
   "pip install --upgrade traad")
 
+;;;###autoload
 (defun traad-install-server ()
   "Install traad.
 
