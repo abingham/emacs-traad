@@ -2,7 +2,7 @@
 
 An Emacs client for [traad](https://github.com/abingham/traad), a client-server
 approach to using the [rope](https://github.com/python-rope/rope) Python
-refactory library. 
+refactory library.
 
 With this client and the `traad` server, you can do Python refactorings from
 Emacs. This client includes support for installing traad for you, so you
@@ -23,21 +23,15 @@ default location::
 M-x traad-install-server
 ```
 
-The server is installed into a virtual environment using
-[python-environment](https://github.com/tkf/emacs-python-environment). You can
-control this installation with two variables:
+The server is installed into a virtual environment
+using
+[virtualenvwrapper.el](https://github.com/porterjamesj/virtualenvwrapper.el).
+You can control this installation using **`traad-environment-name`** which
+specifies the name of the virtual environment. By default it's "traad", and
+there is often no need to change it. However, if you need to support multiple
+installation of traad, you might need to modify this variable.
 
-* **`traad-environment-root`** specifies the name of the virtual environment. By
-  default it's "traad", and there is often no need to change it. However, if you
-  need to support multiple installation of traad, you might need to modify this
-  variable.
-
-* **`traad-environment-virtualenv`** specifies the command used to create the
-  virtual environment (e.g. virtualenv, pyvent, etc.). By default this is `nil`,
-  in which case `python-environment-virtualenv` will be used (i.e. the
-  lower-level python-environment setting).
-
-*For most users the default values should be fine. You really only need to
+*For most users the default value should be fine. You really only need to
 manipulate these variables if you're installing traad for more than one version
 of Python.*
 
