@@ -109,12 +109,6 @@ Note that for python3 projects this commonly needs to be set to `traad3'."
   :type '(repeat string)
   :group 'traad)
 
-(defcustom traad-auto-revert nil
-  "Whether proximal buffers should be automatically reverted \
-after successful refactorings."
-  :type '(boolean)
-  :group 'traad)
-
 (defcustom traad-debug nil
   "Whether debug info should be generated."
   :type '(boolean)
