@@ -913,10 +913,19 @@ task_id field in the response."
 
       (deferred:nextc it
 	(lambda (rsp)
-	  (message
-	   "%s started with task-id %s"
-	   name
-	   (assoc-default 'task_id (request-response-data rsp))))))))
+      (let* ((data (request-response-data rsp))
+             (result (assoc-default 'result data)))
+        (cond
+         ((equal result "success")
+          (message
+           "%s successfully started with task-id %s"
+           name
+           (assoc-default 'task_id data)))
+         ((equal result "failure")
+           (message
+            "Failed to start %s: %s"
+            name
+            data)))))))))
 
 (defun traad-range (upto)
   (defun range_ (x)
