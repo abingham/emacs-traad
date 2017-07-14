@@ -488,6 +488,17 @@ necessary. Return the history buffer."
 	 (cons "path" (buffer-file-name))
 	 (cons "offset" (traad-adjust-point (point))))))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; inline support
+
+(defun traad-inline ()
+  (interactive)
+  (traad-typical-deferred-post
+   "Inline"
+   "/refactor/inline"
+   (list
+    (cons "path" (buffer-file-name))
+    (cons "offset" (traad-adjust-point (point))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; extraction support
