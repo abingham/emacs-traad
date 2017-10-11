@@ -298,10 +298,12 @@ want to use."
   "Undo the IDXth change from the history. \
 IDX is the position of an entry in the undo list (see: \
 traad-history). This change and all that depend on it will be \
-undone."
+undone. \
+Python-like negative indexing works here, so you can \
+undo the most recent change by passing `-1' (the default value)."
   (interactive
    (list
-    (read-number "Index: " 0)))
+    (read-number "Index: " -1)))
   (lexical-let ((data (list (cons "index" idx))))
 
     (deferred:$
@@ -320,10 +322,12 @@ undone."
   "Redo the IDXth change from the history. \
 IDX is the position of an entry in the redo list (see: \
 traad-history). This change and all that depend on it will be \
-redone."
+redone. \
+Python-like negative indexing works here, so you can \
+redo the most recent undo by passing `-1' (the default value)."
   (interactive
    (list
-    (read-number "Index: " 0)))
+    (read-number "Index: " -1)))
   (lexical-let ((data (list (cons "index" idx))))
 
     (deferred:$
