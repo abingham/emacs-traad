@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.10
 ;; URL: https://github.com/abingham/traad
-;; Package-Requires: ((deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123"))
+;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -63,6 +63,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'dash)
 (require 'deferred)
 (require 'json)
 (require 'popup)
@@ -449,12 +450,34 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-string "New name: ")))
-  (traad-typical-deferred-post
-   "Rename"
-   "/refactor/rename"
-   (list (cons "name" new-name)
-	 (cons "path" (buffer-file-name))
-	 (cons "offset" (traad-adjust-point (point))))))
+  (let ((changes nil))
+    (deferred:$
+
+      ;; Get the changes
+      (traad-deferred-request
+       "/refactor/rename"
+       :type "POST"
+       :data (list (cons "name" new-name)
+                   (cons "path" (buffer-file-name))
+                   (cons "offset" (traad-adjust-point (point)))))
+
+      ;; Perform the changes
+      (deferred:nextc it
+        (lambda (rsp)
+          (setq changes (request-response-data rsp))
+          (traad-deferred-request
+           "/refactor/perform"
+           :type "POST"
+           :data changes)))
+
+      ;; Force refresh of buffers in the listed changes
+      ;; TODO: What if the open buffers have unsaved changes?
+      (deferred:nextc it
+        (lambda (rsp)
+          (dolist (path (traad--changes-to-paths changes))
+            (let ((buff (get-file-buffer path)))
+              (if buff
+                  (with-current-buffer buff (revert-buffer t t))))))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Change signature support
@@ -966,6 +989,39 @@ By default, then, it installs traad into
   (venv-with-virtualenv-shell-command
    traad-environment-name
    traad--install-server-command))
+
+;; Utilities
+(defun traad--changes-to-paths (changes)
+  "Get all paths of affected files from a 'changes' response.
+
+Such a response looks like this:
+{
+  'result': 'success',
+  'changes': [[
+      '/Users/sixtynorth/repos/traad/',
+      ['ChangeSet',
+        ['Renaming <using_project> to <foo_log>',
+          [['ChangeContents',
+              ['tests/test_json_api.py',
+               '<contents>',
+               null]],
+           . . .
+          ],
+          null]]]]}
+"
+  (-mapcat
+   (lambda (ch)
+     (let* ((root (elt ch 0))
+            (change-set (elt ch 1))
+            (refactoring (elt change-set 1))
+            (change-contents (elt refactoring 1)))
+       (-map
+        (lambda (content)
+          (let ((file-change (elt content 1)))
+            (concat root (elt file-change 0))))
+        change-contents)))
+   (assoc-default 'changes changes)))
+
 
 (provide 'traad)
 
