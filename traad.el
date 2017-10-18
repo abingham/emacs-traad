@@ -313,7 +313,11 @@ undone."
        :type "POST")
 
       (deferred:nextc it
-	(lambda (rsp) (message "Undo"))))))
+        (lambda (rsp)
+          (dolist (path (traad--changed-to-paths (request-respons-data rsp)))
+            (let ((buff (get-file-buffer path)))
+              (if buff
+                  (with-current-buffer buff (revert-buffer t t))))))))))
 
 
 ;;;###autoload
@@ -524,13 +528,36 @@ necessary. Return the history buffer."
 ;; extraction support
 
 (defun traad-extract-core (location name begin end)
-  (traad-typical-deferred-post
-   name
-   location
-   (list (cons "path" (buffer-file-name))
-	 (cons "start-offset" (traad-adjust-point begin))
-	 (cons "end-offset" (traad-adjust-point end))
-	 (cons "name" name))))
+  ;; TODO: refactor this common pattern of getting changes, applying them, and refreshing buffers.
+  (let ((changes nil))
+    (deferred:$
+
+      ;; Get the changes
+      (traad-deferred-request
+       location
+       :type "POST"
+       :data (list (cons "path" (buffer-file-name))
+                   (cons "start-offset" (traad-adjust-point begin))
+                   (cons "end-offset" (traad-adjust-point end))
+                   (cons "name" name)))
+
+      ;; Perform the changes
+      (deferred:nextc it
+        (lambda (rsp)
+          (setq changes (request-response-data rsp))
+          (traad-deferred-request
+           "/refactor/perform"
+           :type "POST"
+           :data changes)))
+
+      ;; Force refresh of buffers in the listed changes
+      ;; TODO: What if the open buffers have unsaved changes?
+      (deferred:nextc it
+        (lambda (rsp)
+          (dolist (path (traad--changes-to-paths changes))
+            (let ((buff (get-file-buffer path)))
+              (if buff
+                  (with-current-buffer buff (revert-buffer t t))))))))))
 
 ;;;###autoload
 (defun traad-extract-method (name begin end)
@@ -997,8 +1024,7 @@ By default, then, it installs traad into
 Such a response looks like this:
 {
   'result': 'success',
-  'changes': [[
-      '/Users/sixtynorth/repos/traad/',
+  'changes':
       ['ChangeSet',
         ['Renaming <using_project> to <foo_log>',
           [['ChangeContents',
@@ -1007,21 +1033,16 @@ Such a response looks like this:
                null]],
            . . .
           ],
-          null]]]]}
+          null]]}
 "
-  (-mapcat
-   (lambda (ch)
-     (let* ((root (elt ch 0))
-            (change-set (elt ch 1))
-            (refactoring (elt change-set 1))
-            (change-contents (elt refactoring 1)))
-       (-map
-        (lambda (content)
-          (let ((file-change (elt content 1)))
-            (concat root (elt file-change 0))))
-        change-contents)))
-   (assoc-default 'changes changes)))
-
+  (let* ((change-set (assoc-default 'changes changes))
+         (refactoring (elt change-set 1))
+         (change-contents (elt refactoring 1)))
+    (-map
+     (lambda (content)
+       (let ((file-change (elt content 1)))
+         (elt file-change 0)))
+     change-contents)))
 
 (provide 'traad)
 
