@@ -314,7 +314,7 @@ undone."
 
       (deferred:nextc it
         (lambda (rsp)
-          (dolist (path (traad--changed-to-paths (request-respons-data rsp)))
+          (dolist (path (traad--changes-to-paths (request-respons-data rsp)))
             (let ((buff (get-file-buffer path)))
               (if buff
                   (with-current-buffer buff (revert-buffer t t))))))))))
@@ -454,34 +454,11 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-string "New name: ")))
-  (let ((changes nil))
-    (deferred:$
-
-      ;; Get the changes
-      (traad-deferred-request
-       "/refactor/rename"
-       :type "POST"
-       :data (list (cons "name" new-name)
-                   (cons "path" (buffer-file-name))
-                   (cons "offset" (traad-adjust-point (point)))))
-
-      ;; Perform the changes
-      (deferred:nextc it
-        (lambda (rsp)
-          (setq changes (request-response-data rsp))
-          (traad-deferred-request
-           "/refactor/perform"
-           :type "POST"
-           :data changes)))
-
-      ;; Force refresh of buffers in the listed changes
-      ;; TODO: What if the open buffers have unsaved changes?
-      (deferred:nextc it
-        (lambda (rsp)
-          (dolist (path (traad--changes-to-paths changes))
-            (let ((buff (get-file-buffer path)))
-              (if buff
-                  (with-current-buffer buff (revert-buffer t t))))))))))
+  (traad--fetch-perform-refresh
+   "/refactor/rename"
+   :data (list (cons "name" new-name)
+               (cons "path" (buffer-file-name))
+               (cons "offset" (traad-adjust-point (point))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Change signature support
@@ -529,35 +506,12 @@ necessary. Return the history buffer."
 
 (defun traad-extract-core (location name begin end)
   ;; TODO: refactor this common pattern of getting changes, applying them, and refreshing buffers.
-  (let ((changes nil))
-    (deferred:$
-
-      ;; Get the changes
-      (traad-deferred-request
-       location
-       :type "POST"
-       :data (list (cons "path" (buffer-file-name))
-                   (cons "start-offset" (traad-adjust-point begin))
-                   (cons "end-offset" (traad-adjust-point end))
-                   (cons "name" name)))
-
-      ;; Perform the changes
-      (deferred:nextc it
-        (lambda (rsp)
-          (setq changes (request-response-data rsp))
-          (traad-deferred-request
-           "/refactor/perform"
-           :type "POST"
-           :data changes)))
-
-      ;; Force refresh of buffers in the listed changes
-      ;; TODO: What if the open buffers have unsaved changes?
-      (deferred:nextc it
-        (lambda (rsp)
-          (dolist (path (traad--changes-to-paths changes))
-            (let ((buff (get-file-buffer path)))
-              (if buff
-                  (with-current-buffer buff (revert-buffer t t))))))))))
+  (traad--fetch-perform-refresh
+   location
+   :data (list (cons "path" (buffer-file-name))
+               (cons "start-offset" (traad-adjust-point begin))
+               (cons "end-offset" (traad-adjust-point end))
+               (cons "name" name))))
 
 ;;;###autoload
 (defun traad-extract-method (name begin end)
@@ -946,6 +900,35 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
    "http://" traad-host
    ":" (number-to-string traad-server-port-actual)
    location))
+
+(defun* traad--fetch-perform-refresh (location &key (data '()))
+  (let ((changes nil))
+    (deferred:$
+
+      ;; Get the changes
+      (traad-deferred-request
+       location
+       :type "POST"
+       :data data)
+
+      ;; Perform the changes
+      (deferred:nextc it
+        (lambda (rsp)
+          (setq changes (request-response-data rsp))
+          (traad-deferred-request
+           "/refactor/perform"
+           :type "POST"
+           :data changes)))
+
+      ;; Force refresh of buffers in the listed changes
+      ;; TODO: What if the open buffers have unsaved changes?
+      (deferred:nextc it
+        (lambda (rsp)
+          (dolist (path (traad--changes-to-paths changes))
+            (let ((buff (get-file-buffer path)))
+              (if buff
+                  (with-current-buffer buff (revert-buffer t t)))))))))
+  )
 
 (defun* traad-deferred-request (location &key (type "GET") (data '()))
   (let ((request-backend 'url-retrieve))
