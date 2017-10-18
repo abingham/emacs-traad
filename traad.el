@@ -417,6 +417,7 @@ necessary. Return the history buffer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; renaming support
 
+;; TODO
 ;;;###autoload
 (defun traad-rename-current-file (new-name)
   "Rename the current file/module."
@@ -467,11 +468,10 @@ necessary. Return the history buffer."
 (defun traad-normalize-arguments ()
   "Normalize the arguments for the method at point."
   (interactive)
-  (traad-typical-deferred-post
-   "Normalize-arguments"
+  (traad--fetch-perform-refresh
    "/refactor/normalize_arguments"
-   (list (cons "path" (buffer-file-name))
-	 (cons "offset" (traad-adjust-point (point))))))
+   :data (list (cons "path" (buffer-file-name))
+               (cons "offset" (traad-adjust-point (point))))))
 
 ;;;###autoload
 (defun traad-remove-argument (index)
@@ -482,20 +482,20 @@ necessary. Return the history buffer."
 					; TODO: Surely there's a
 					; better way to construct
 					; these lists...
-  (traad-typical-deferred-post
-   "Remove-argument"
+  (traad--fetch-perform-refresh
    "/refactor/remove_argument"
-   (list (cons "arg_index" index)
-	 (cons "path" (buffer-file-name))
-	 (cons "offset" (traad-adjust-point (point))))))
+   :data (list (cons "arg_index" index)
+               (cons "path" (buffer-file-name))
+               (cons "offset" (traad-adjust-point (point))))))
+
+;; TODO: add-argument
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; inline support
 
 (defun traad-inline ()
   (interactive)
-  (traad-typical-deferred-post
-   "Inline"
+  (traad--fetch-perform-refresh
    "/refactor/inline"
    (list
     (cons "path" (buffer-file-name))
