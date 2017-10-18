@@ -314,7 +314,7 @@ undone."
 
       (deferred:nextc it
         (lambda (rsp)
-          (dolist (path (traad--changes-to-paths (request-respons-data rsp)))
+          (dolist (path (traad--changes-to-paths (request-response-data rsp)))
             (let ((buff (get-file-buffer path)))
               (if buff
                   (with-current-buffer buff (revert-buffer t t))))))))))
