@@ -314,10 +314,13 @@ undone."
 
       (deferred:nextc it
         (lambda (rsp)
-          (dolist (path (traad--changes-to-paths (request-response-data rsp)))
-            (let ((buff (get-file-buffer path)))
-              (if buff
-                  (with-current-buffer buff (revert-buffer t t))))))))))
+          (let ((response (request-response-data rsp))
+                (changesets (assoc-default 'changes response))))
+          (dolist (changeset changesets)
+            (dolist (path (traad--change-set-to-paths changeset))
+              (let ((buff (get-file-buffer path)))
+                (if buff
+                    (with-current-buffer buff (revert-buffer t t)))))))))))
 
 
 ;;;###autoload
@@ -902,7 +905,7 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
    location))
 
 (defun* traad--fetch-perform-refresh (location &key (data '()))
-  (let ((changes nil))
+  (let ((response nil))
     (deferred:$
 
       ;; Get the changes
@@ -914,7 +917,7 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
       ;; Perform the changes
       (deferred:nextc it
         (lambda (rsp)
-          (setq changes (request-response-data rsp))
+          (setq response (request-response-data rsp))
           (traad-deferred-request
            "/refactor/perform"
            :type "POST"
@@ -924,10 +927,11 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
       ;; TODO: What if the open buffers have unsaved changes?
       (deferred:nextc it
         (lambda (rsp)
-          (dolist (path (traad--changes-to-paths changes))
-            (let ((buff (get-file-buffer path)))
-              (if buff
-                  (with-current-buffer buff (revert-buffer t t)))))))))
+          (let ((changeset (assoc-default 'changes response)))
+            (dolist (path (traad--change-set-to-paths changeset))
+              (let ((buff (get-file-buffer path)))
+                (if buff
+                    (with-current-buffer buff (revert-buffer t t))))))))))
   )
 
 (defun* traad-deferred-request (location &key (type "GET") (data '()))
@@ -1001,7 +1005,7 @@ By default, then, it installs traad into
    traad--install-server-command))
 
 ;; Utilities
-(defun traad--changes-to-paths (changes)
+(defun traad--change-set-to-paths (changeset)
   "Get all paths of affected files from a 'changes' response.
 
 Such a response looks like this:
@@ -1018,8 +1022,7 @@ Such a response looks like this:
           ],
           null]]}
 "
-  (let* ((change-set (assoc-default 'changes changes))
-         (refactoring (elt change-set 1))
+  (let* ((refactoring (elt changeset 1))
          (change-contents (elt refactoring 1)))
     (-map
      (lambda (content)
