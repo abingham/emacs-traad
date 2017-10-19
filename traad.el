@@ -315,8 +315,7 @@ undone."
       (deferred:nextc it
         (lambda (rsp)
           (let ((response (request-response-data rsp))
-                (changesets (assoc-default 'changes response))))
-          (dolist (changeset changesets)
+                (changeset (assoc-default 'changes response)))
             (dolist (path (traad--change-set-to-paths changeset))
               (let ((buff (get-file-buffer path)))
                 (if buff
@@ -905,6 +904,7 @@ necessary. Return the history buffer."
    location))
 
 (defun* traad--fetch-perform-refresh (location &key (data '()))
+  ;; TODO: check for non-success and lack of 'changes key
   (let ((response nil))
     (deferred:$
 
@@ -921,7 +921,7 @@ necessary. Return the history buffer."
           (traad-deferred-request
            "/refactor/perform"
            :type "POST"
-           :data changes)))
+           :data response)))
 
       ;; Force refresh of buffers in the listed changes
       ;; TODO: What if the open buffers have unsaved changes?
@@ -929,10 +929,10 @@ necessary. Return the history buffer."
         (lambda (rsp)
           (let ((changeset (assoc-default 'changes response)))
             (dolist (path (traad--change-set-to-paths changeset))
+              (message "reverting: %s" path)
               (let ((buff (get-file-buffer path)))
                 (if buff
-                    (with-current-buffer buff (revert-buffer t t))))))))))
-  )
+                    (with-current-buffer buff (revert-buffer :ignore-auto :no-confirm)))))))))))
 
 (defun* traad-deferred-request (location &key (type "GET") (data '()))
   (let ((request-backend 'url-retrieve))
@@ -1006,12 +1006,9 @@ By default, then, it installs traad into
 
 ;; Utilities
 (defun traad--change-set-to-paths (changeset)
-  "Get all paths of affected files from a 'changes' response.
+  "Get all paths of affected files from a changeset.
 
-Such a response looks like this:
-{
-  'result': 'success',
-  'changes':
+A changeset looks like this:
       ['ChangeSet',
         ['Renaming <using_project> to <foo_log>',
           [['ChangeContents',
@@ -1020,7 +1017,7 @@ Such a response looks like this:
                null]],
            . . .
           ],
-          null]]}
+          null]]
 "
   (let* ((refactoring (elt changeset 1))
          (change-contents (elt refactoring 1)))
