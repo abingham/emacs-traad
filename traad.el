@@ -602,294 +602,294 @@ necessary. Return the history buffer."
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; findit
 
-(defun traad-find-occurrences (pos)
-  "Get all occurences the use of the symbol at POS in the
-current buffer.
+;; (defun traad-find-occurrences (pos)
+;;   "Get all occurences the use of the symbol at POS in the
+;; current buffer.
 
-  Returns a deferred request. The 'data' key in the JSON hold the
-  location data in the form:
+;;   Returns a deferred request. The 'data' key in the JSON hold the
+;;   location data in the form:
 
-	[[path, [region-start, region-stop], offset, unsure, lineno], . . .]
-  "
-  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
-    (traad-deferred-request
-     "/findit/occurrences"
-     :data data
-     :type "POST")))
+;; 	[[path, [region-start, region-stop], offset, unsure, lineno], . . .]
+;;   "
+;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+;; 			    (cons "path" (buffer-file-name)))))
+;;     (traad-deferred-request
+;;      "/findit/occurrences"
+;;      :data data
+;;      :type "POST")))
 
-(defun traad-find-implementations (pos)
-  "Get the implementations of the symbol at POS in the current buffer.
+;; (defun traad-find-implementations (pos)
+;;   "Get the implementations of the symbol at POS in the current buffer.
 
-  Returns a deferred request. The 'data' key in the JSON hold the
-  location data in the form:
+;;   Returns a deferred request. The 'data' key in the JSON hold the
+;;   location data in the form:
 
-	[[path, [region-start, region-stop], offset, unsure, lineno], . . .]
-  "
-  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
-    (traad-deferred-request
-     "/findit/implementations"
-     :data data
-     :type "POST")))
+;; 	[[path, [region-start, region-stop], offset, unsure, lineno], . . .]
+;;   "
+;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+;; 			    (cons "path" (buffer-file-name)))))
+;;     (traad-deferred-request
+;;      "/findit/implementations"
+;;      :data data
+;;      :type "POST")))
 
-(defun traad-find-definition (pos)
-  "Get location of a function definition.
+;; (defun traad-find-definition (pos)
+;;   "Get location of a function definition.
 
-  Returns a deferred request. The 'data' key in the JSON hold the location in
-  the form:
+;;   Returns a deferred request. The 'data' key in the JSON hold the location in
+;;   the form:
 
-	[path, [region-start, region-stop], offset, unsure, lineno]
-  "
-  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
-    (traad-deferred-request
-     "/findit/definition"
-     :data data
-     :type "POST")))
+;; 	[path, [region-start, region-stop], offset, unsure, lineno]
+;;   "
+;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+;; 			    (cons "path" (buffer-file-name)))))
+;;     (traad-deferred-request
+;;      "/findit/definition"
+;;      :data data
+;;      :type "POST")))
 
-(defun traad-display-findit (pos func buff-name)
-  "Common display routine for occurrences and implementations.
+;; (defun traad-display-findit (pos func buff-name)
+;;   "Common display routine for occurrences and implementations.
 
-  Call FUNC with POS and fill up the buffer BUFF-NAME with the results."
-  (lexical-let ((buff-name buff-name))
-    (deferred:$
-					; Fetch in parallel...
-      (deferred:parallel
+;;   Call FUNC with POS and fill up the buffer BUFF-NAME with the results."
+;;   (lexical-let ((buff-name buff-name))
+;;     (deferred:$
+;; 					; Fetch in parallel...
+;;       (deferred:parallel
 
-					; ...the occurrence data...
-	(deferred:$
-	  (apply func (list pos))
-	  (deferred:nextc it
-	    'request-response-data)
-	  (deferred:nextc it
-	    (lambda (x) (assoc-default 'data x))))
+;; 					; ...the occurrence data...
+;; 	(deferred:$
+;; 	  (apply func (list pos))
+;; 	  (deferred:nextc it
+;; 	    'request-response-data)
+;; 	  (deferred:nextc it
+;; 	    (lambda (x) (assoc-default 'data x))))
 
-					; ...and the project root.
-	(deferred:$
-	  (traad-get-root)
-	  (deferred:nextc it
-	    'request-response-data)
-	  (deferred:nextc it
-	    (lambda (x) (assoc-default 'root x)))))
+;; 					; ...and the project root.
+;; 	(deferred:$
+;; 	  (traad-get-root)
+;; 	  (deferred:nextc it
+;; 	    'request-response-data)
+;; 	  (deferred:nextc it
+;; 	    (lambda (x) (assoc-default 'root x)))))
 
-      (deferred:nextc it
-	(lambda (input)
-	  (let ((locs (elt input 0)) ; the location vector
-		(root (elt input 1)) ; the project root
-		(buff (get-buffer-create buff-name))
-		(inhibit-read-only 't))
-	    (pop-to-buffer buff)
-	    (erase-buffer)
+;;       (deferred:nextc it
+;; 	(lambda (input)
+;; 	  (let ((locs (elt input 0)) ; the location vector
+;; 		(root (elt input 1)) ; the project root
+;; 		(buff (get-buffer-create buff-name))
+;; 		(inhibit-read-only 't))
+;; 	    (pop-to-buffer buff)
+;; 	    (erase-buffer)
 
-					; For each location, add a
-					; line to the buffer.  TODO:
-					; Is there a "dovector" we can
-					; use? This is a bit fugly.
-	    (mapcar
-	     (lambda (loc)
-	       (lexical-let* ((path (elt loc 0))
-			      (abspath (concat root "/" path))
-			      (lineno (elt loc 4))
-			      (code (nth (- lineno 1) (traad-read-lines abspath))))
-		 (insert-button
-		  (format "%s:%s: %s\n"
-			  path
-			  lineno
-			  code)
-		  'action (lambda (x)
-			    (goto-line
-			     lineno
-			     (find-file-other-window abspath))))))
-	     locs)))))))
+;; 					; For each location, add a
+;; 					; line to the buffer.  TODO:
+;; 					; Is there a "dovector" we can
+;; 					; use? This is a bit fugly.
+;; 	    (mapcar
+;; 	     (lambda (loc)
+;; 	       (lexical-let* ((path (elt loc 0))
+;; 			      (abspath (concat root "/" path))
+;; 			      (lineno (elt loc 4))
+;; 			      (code (nth (- lineno 1) (traad-read-lines abspath))))
+;; 		 (insert-button
+;; 		  (format "%s:%s: %s\n"
+;; 			  path
+;; 			  lineno
+;; 			  code)
+;; 		  'action (lambda (x)
+;; 			    (goto-line
+;; 			     lineno
+;; 			     (find-file-other-window abspath))))))
+;; 	     locs)))))))
 
 
-;;;###autoload
-(defun traad-display-occurrences (pos)
-  "Display all occurences the use of the symbol at POS in the
-current buffer."
-  (interactive "d")
-  (traad-display-findit pos 'traad-find-occurrences "*traad-occurrences*"))
+;; ;;;###autoload
+;; (defun traad-display-occurrences (pos)
+;;   "Display all occurences the use of the symbol at POS in the
+;; current buffer."
+;;   (interactive "d")
+;;   (traad-display-findit pos 'traad-find-occurrences "*traad-occurrences*"))
 
-;;;###autoload
-(defun traad-display-implementations (pos)
-  "Display all occurences the use of the symbol as POS in the
-current buffer."
-  (interactive "d")
-  (traad-display-findit pos 'traad-find-implementations "*traad-implementations*"))
+;; ;;;###autoload
+;; (defun traad-display-implementations (pos)
+;;   "Display all occurences the use of the symbol as POS in the
+;; current buffer."
+;;   (interactive "d")
+;;   (traad-display-findit pos 'traad-find-implementations "*traad-implementations*"))
 
-;;;###autoload
-(defun traad-goto-definition (pos)
-  "Go to the definition of the function as POS."
-  (interactive "d")
-  (deferred:$
-    (deferred:parallel
-      (deferred:$
-	(traad-find-definition pos)
-	(deferred:nextc it
-	  'request-response-data)
-	(deferred:nextc it
-	  (lambda (x) (assoc-default 'data x))))
-      (deferred:$
-	(traad-get-root)
-	(deferred:nextc it
-	  'request-response-data)
-	(deferred:nextc it
-	  (lambda (x) (assoc-default 'root x)))))
+;; ;;;###autoload
+;; (defun traad-goto-definition (pos)
+;;   "Go to the definition of the function as POS."
+;;   (interactive "d")
+;;   (deferred:$
+;;     (deferred:parallel
+;;       (deferred:$
+;; 	(traad-find-definition pos)
+;; 	(deferred:nextc it
+;; 	  'request-response-data)
+;; 	(deferred:nextc it
+;; 	  (lambda (x) (assoc-default 'data x))))
+;;       (deferred:$
+;; 	(traad-get-root)
+;; 	(deferred:nextc it
+;; 	  'request-response-data)
+;; 	(deferred:nextc it
+;; 	  (lambda (x) (assoc-default 'root x)))))
 
-    (deferred:nextc it
-      (lambda (input)
-	(let ((loc (elt input 0)))
-	  (if (not loc)
-	      (message "No definition found.")
-	    (letrec ((path (elt loc 0))
-		     (root (elt input 1))
-		     (abspath (if (file-name-absolute-p path) path (concat root "/" path)))
-		     (lineno (elt loc 4)))
-	      (goto-line
-	       lineno
-	       (find-file-other-window abspath)))))))))
+;;     (deferred:nextc it
+;;       (lambda (input)
+;; 	(let ((loc (elt input 0)))
+;; 	  (if (not loc)
+;; 	      (message "No definition found.")
+;; 	    (letrec ((path (elt loc 0))
+;; 		     (root (elt input 1))
+;; 		     (abspath (if (file-name-absolute-p path) path (concat root "/" path)))
+;; 		     (lineno (elt loc 4)))
+;; 	      (goto-line
+;; 	       lineno
+;; 	       (find-file-other-window abspath)))))))))
 
-;;;###autoload
-(defun traad-findit (type)
-  "Run a findit function at the current point."
-  (interactive
-   (list
-    (completing-read
-     "Type: "
-     (list "occurrences" "implementations" "definition"))))
-  (cond
-   ((equal type "occurrences")
-    (traad-display-occurrences (point)))
-   ((equal type "implementations")
-    (traad-display-implementations (point)))
-   ((equal type "definition")
-    (traad-goto-definition (point)))))
+;; ;;;###autoload
+;; (defun traad-findit (type)
+;;   "Run a findit function at the current point."
+;;   (interactive
+;;    (list
+;;     (completing-read
+;;      "Type: "
+;;      (list "occurrences" "implementations" "definition"))))
+;;   (cond
+;;    ((equal type "occurrences")
+;;     (traad-display-occurrences (point)))
+;;    ((equal type "implementations")
+;;     (traad-display-implementations (point)))
+;;    ((equal type "definition")
+;;     (traad-goto-definition (point)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; code assist
 
 ;;;###autoload
-(defun traad-code-assist (pos)
-  "Get possible completions at POS in current buffer.
+;; (defun traad-code-assist (pos)
+;;   "Get possible completions at POS in current buffer.
 
-This returns an alist like ((completions . [[name documentation scope type]]) (result . \"success\"))"
-  (interactive "d")
-  (let ((data (list (cons "offset" (traad-adjust-point pos))
-		    (cons "path" (buffer-file-name))))
-	(request-backend 'url-retrieve))
-    (request-response-data
-     (request
-      (concat "http://" traad-host ":" (number-to-string traad-server-port-actual)
-	      "/code_assist/completions")
-      :headers '(("Content-Type" . "application/json"))
-      :data (json-encode data)
-      :sync t
-      :parser 'json-read
-      :data (json-encode data)
-      :type "POST"))))
+;; This returns an alist like ((completions . [[name documentation scope type]]) (result . \"success\"))"
+;;   (interactive "d")
+;;   (let ((data (list (cons "offset" (traad-adjust-point pos))
+;; 		    (cons "path" (buffer-file-name))))
+;; 	(request-backend 'url-retrieve))
+;;     (request-response-data
+;;      (request
+;;       (concat "http://" traad-host ":" (number-to-string traad-server-port-actual)
+;; 	      "/code_assist/completions")
+;;       :headers '(("Content-Type" . "application/json"))
+;;       :data (json-encode data)
+;;       :sync t
+;;       :parser 'json-read
+;;       :data (json-encode data)
+;;       :type "POST"))))
 
-(defun traad-display-in-buffer (msg buffer)
-  (let ((cbuff (current-buffer))
-	(buff (get-buffer-create buffer))
-	(inhibit-read-only 't))
-    (pop-to-buffer buff)
-    (erase-buffer)
-    (insert msg)
-    (pop-to-buffer cbuff)))
+;; (defun traad-display-in-buffer (msg buffer)
+;;   (let ((cbuff (current-buffer))
+;; 	(buff (get-buffer-create buffer))
+;; 	(inhibit-read-only 't))
+;;     (pop-to-buffer buff)
+;;     (erase-buffer)
+;;     (insert msg)
+;;     (pop-to-buffer cbuff)))
 
-(defun traad-get-calltip (pos)
-  "Get the calltip for an object.
+;; (defun traad-get-calltip (pos)
+;;   "Get the calltip for an object.
 
-  Returns a deferred which produces the calltip string.
-  "
-  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
-    (deferred:$
-      (traad-deferred-request
-       "/code_assist/calltip"
-       :data data
-       :type "POST")
-      (deferred:nextc it
-	(lambda (req)
-	  (assoc-default
-	   'calltip
-	   (request-response-data req)))))))
+;;   Returns a deferred which produces the calltip string.
+;;   "
+;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+;; 			    (cons "path" (buffer-file-name)))))
+;;     (deferred:$
+;;       (traad-deferred-request
+;;        "/code_assist/calltip"
+;;        :data data
+;;        :type "POST")
+;;       (deferred:nextc it
+;; 	(lambda (req)
+;; 	  (assoc-default
+;; 	   'calltip
+;; 	   (request-response-data req)))))))
 
-;;;###autoload
-(defun traad-display-calltip (pos)
-  "Display calltip for an object."
-  (interactive "d")
-  (deferred:$
-    (traad-get-calltip pos)
-    (deferred:nextc it
-      (lambda (calltip)
-	(if calltip
-	    (traad-display-in-buffer
-	     calltip
-	     "*traad-calltip*")
-	  (message "No calltip available."))))))
+;; ;;;###autoload
+;; (defun traad-display-calltip (pos)
+;;   "Display calltip for an object."
+;;   (interactive "d")
+;;   (deferred:$
+;;     (traad-get-calltip pos)
+;;     (deferred:nextc it
+;;       (lambda (calltip)
+;; 	(if calltip
+;; 	    (traad-display-in-buffer
+;; 	     calltip
+;; 	     "*traad-calltip*")
+;; 	  (message "No calltip available."))))))
 
-;;;###autoload
-(defun traad-popup-calltip (pos)
-  (interactive "d")
-  (lexical-let ((pos pos))
-    (deferred:$
-      (traad-get-calltip pos)
-      (deferred:nextc it
-	(lambda (calltip)
-	  (if calltip
-	      (popup-tip
-	       calltip
-	       :point pos)))))))
+;; ;;;###autoload
+;; (defun traad-popup-calltip (pos)
+;;   (interactive "d")
+;;   (lexical-let ((pos pos))
+;;     (deferred:$
+;;       (traad-get-calltip pos)
+;;       (deferred:nextc it
+;; 	(lambda (calltip)
+;; 	  (if calltip
+;; 	      (popup-tip
+;; 	       calltip
+;; 	       :point pos)))))))
 
-(defun traad-get-doc (pos)
-  "Get docstring for an object.
+;; (defun traad-get-doc (pos)
+;;   "Get docstring for an object.
 
-  Returns a deferred which produces the doc string. If there is
-  not docstring, the deferred produces nil.
-  "
-  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
-    (deferred:$
+;;   Returns a deferred which produces the doc string. If there is
+;;   not docstring, the deferred produces nil.
+;;   "
+;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+;; 			    (cons "path" (buffer-file-name)))))
+;;     (deferred:$
 
-      (traad-deferred-request
-       "/code_assist/doc"
-       :data data
-       :type "POST")
+;;       (traad-deferred-request
+;;        "/code_assist/doc"
+;;        :data data
+;;        :type "POST")
 
-      (deferred:nextc it
-	(lambda (req)
-	  (assoc-default
-	   'doc
-	   (request-response-data req)))))))
+;;       (deferred:nextc it
+;; 	(lambda (req)
+;; 	  (assoc-default
+;; 	   'doc
+;; 	   (request-response-data req)))))))
 
-;;;###autoload
-(defun traad-display-doc (pos)
-  "Display docstring for an object."
-  (interactive "d")
-  (deferred:$
-    (traad-get-doc pos)
-    (deferred:nextc it
-      (lambda (doc)
-	(if doc
-	    (traad-display-in-buffer
-	     doc
-	     "*traad-doc*")
-	  (message "No docstring available."))))))
+;; ;;;###autoload
+;; (defun traad-display-doc (pos)
+;;   "Display docstring for an object."
+;;   (interactive "d")
+;;   (deferred:$
+;;     (traad-get-doc pos)
+;;     (deferred:nextc it
+;;       (lambda (doc)
+;; 	(if doc
+;; 	    (traad-display-in-buffer
+;; 	     doc
+;; 	     "*traad-doc*")
+;; 	  (message "No docstring available."))))))
 
-;;;###autoload
-(defun traad-popup-doc (pos)
-  (interactive "d")
-  (lexical-let ((pos pos))
-    (deferred:$
-      (traad-get-doc pos)
-      (deferred:nextc it
-	(lambda (doc)
-	  (if doc
-	      (popup-tip
-	       doc
-	       :point pos)))))))
+;; ;;;###autoload
+;; (defun traad-popup-doc (pos)
+;;   (interactive "d")
+;;   (lexical-let ((pos pos))
+;;     (deferred:$
+;;       (traad-get-doc pos)
+;;       (deferred:nextc it
+;; 	(lambda (doc)
+;; 	  (if doc
+;; 	      (popup-tip
+;; 	       doc
+;; 	       :point pos)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; low-level support
