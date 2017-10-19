@@ -904,6 +904,9 @@ necessary. Return the history buffer."
    location))
 
 (defun* traad--fetch-perform-refresh (location &key (data '()))
+  "Perform common refactoring path: fetch changes from
+`location' (passing `data' as a payload), perform them, and
+refresh affected buffers."
   ;; TODO: check for non-success and lack of 'changes key
   (let ((response nil))
     (deferred:$
