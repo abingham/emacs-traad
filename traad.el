@@ -536,10 +536,9 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
-  (traad-typical-deferred-post
-   "Organize-imports"
+  (traad--fetch-perform-refresh
    "/imports/organize"
-   (list (cons "path" filename))))
+   :data (list (cons "path" filename))))
 
 ;;;###autoload
 (defun traad-expand-star-imports (filename)
@@ -547,10 +546,9 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
-  (traad-typical-deferred-post
-   "Expand-star-imports"
-   "/imports/expand_star"
-   (list (cons "path" filename))))
+  (traad--fetch-perform-refresh
+   "/imports/expand_stars"
+   :data (list (cons "path" filename))))
 
 ;;;###autoload
 (defun traad-froms-to-imports (filename)
@@ -558,10 +556,9 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
-  (traad-typical-deferred-post
-   "Froms-to-imports"
+  (traad--fetch-perform-refresh
    "/imports/froms_to_imports"
-   (list (cons "path" filename))))
+   :data (list (cons "path" filename))))
 
 ;;;###autoload
 (defun traad-relatives-to-absolutes (filename)
@@ -569,10 +566,9 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
-  (traad-typical-deferred-post
-   "Relatives-to-absolutes"
+  (traad--fetch-perform-refresh
    "/imports/relatives_to_absolutes"
-   (list (cons "path" filename))))
+   :data (list (cons "path" filename))))
 
 ;;;###autoload
 (defun traad-handle-long-imports (filename)
@@ -580,10 +576,9 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
-  (traad-typical-deferred-post
-   "Handle-long-imports"
+  (traad--fetch-perform-refresh
    "/imports/handle_long_imports"
-   (list (cons "path" filename))))
+   :data (list (cons "path" filename))))
 
 ;;;###autoload
 (defun traad-imports-super-smackdown (filename)
