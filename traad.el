@@ -1,6 +1,6 @@
 ;;; traad.el --- emacs interface to the traad refactoring server.
 ;;
-;; Copyright (c) 2012-2016 Austin Bingham
+;; Copyright (c) 2012-2017 Austin Bingham
 ;;
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 0.10
@@ -71,9 +71,9 @@
 (require 'request-deferred)
 (require 'virtualenvwrapper)
 
-					; TODO: Call
-					; update-history-buffer as
-					; needed.
+                                        ; TODO: Call
+                                        ; update-history-buffer as
+                                        ; needed.
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user variables
@@ -186,16 +186,16 @@ want to use."
 
     (deferred:nextc it
       (lambda (req)
-	(let ((protocol-version (assoc-default
-				 'protocol-version
-				 (request-response-data req))))
-	  (if (eq protocol-version traad-required-protocol-version)
-	      (message "Supported protocol version detected: %s" protocol-version)
-	    (error "Server protocol version is %s, but we require version %s"
-		   protocol-version
-		   traad-required-protocol-version)))))))
+        (let ((protocol-version (assoc-default
+                                 'protocol-version
+                                 (request-response-data req))))
+          (if (eq protocol-version traad-required-protocol-version)
+              (message "Supported protocol version detected: %s" protocol-version)
+            (error "Server protocol version is %s, but we require version %s"
+                   protocol-version
+                   traad-required-protocol-version)))))))
 
-					; TODO
+                                        ; TODO
 ;; (defun traad-add-cross-project (directory)
 ;;   "Add a cross-project to the traad instance."
 ;;   (interactive
@@ -203,7 +203,7 @@ want to use."
 ;;     (read-directory-name "Directory:")))
 ;;   (traad-call 'add_cross_project directory))
 
-					; TODO
+                                        ; TODO
 ;; (defun traad-remove-cross-project (directory)
 ;;   "Remove a cross-project from the traad instance."
 ;;   (interactive
@@ -213,7 +213,7 @@ want to use."
 ;;      (traad-call 'cross_project_directories))))
 ;;   (traad-call 'remove_cross_project directory))
 
-					; TODO
+                                        ; TODO
 ;; (defun traad-get-cross-project-directories ()
 ;;   "Get a list of root directories for cross projects."
 ;;   (interactive)
@@ -231,65 +231,6 @@ want to use."
   "Determine if a traad server is running."
   (interactive)
   (if (get-process "traad-server") 't nil))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; status of tasks running on the server.
-
-(defun traad-task-status (task-id)
-  "Get the status of a traad task. Returns a deferred request."
-  (traad-deferred-request
-   "/task/" (number-to-string task-id)))
-
-(defun traad-full-task-status ()
-  "Get the status of all traad tasks. Returns a deferred request."
-  (traad-deferred-request
-   "/tasks"))
-
-;;;###autoload
-(defun traad-display-task-status (task-id)
-  "Get the status of a traad task."
-  (interactive
-   (list
-    (read-number "ID: ")))
-  (deferred:$
-    (traad-task-status task-id)
-    (deferred:nextc it
-      (lambda (response)
-	(message "Task status: %s"
-		 (request-response-data response))))))
-
-;;;###autoload
-(defun traad-display-full-task-status ()
-					; TODO: Improve the display of
-					; this data.
-  (interactive)
-  (deferred:$
-    (traad-full-task-status)
-    (deferred:nextc it
-      (lambda (response)
-	(let ((buff (get-buffer-create "*traad-task-status*")))
-	  (switch-to-buffer buff)
-	  (erase-buffer)
-	  (insert (format "%s"
-			  (request-response-data response))))))))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; server info stuff.
-
-(defun traad-get-root ()
-  "Get the project root.
-
-  Returns a deferred request object. The root information is in
-  the 'data' key of the JSON data.
-  "
-					; TODO: Can we cache this
-					; value? That works if we
-					; assume that the server
-					; doesn't change roots or get
-					; restarted on a different
-					; root. Hmm...
-  (traad-deferred-request
-   "/root"))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; history
@@ -341,7 +282,7 @@ redone."
        :type "POST")
 
       (deferred:nextc it
-	(lambda (rsp) (message "Redo"))))))
+        (lambda (rsp) (message "Redo"))))))
 
 (defun traad-update-history-buffer ()
   "Update the contents of the history buffer, creating it if \
@@ -356,17 +297,17 @@ necessary. Return the history buffer."
 
     (deferred:nextc it
       (lambda (inputs)
-	(let* ((undo (assoc-default 'history (request-response-data (elt inputs 0))))
-	       (redo (assoc-default 'history (request-response-data (elt inputs 1))))
-	       (buff (get-buffer-create "*traad-history*")))
-	  (set-buffer buff)
-	  (erase-buffer)
-	  (insert "== UNDO HISTORY ==\n")
-	  (if undo (insert (pp-to-string (traad-enumerate undo))))
-	  (insert "\n")
-	  (insert "== REDO HISTORY ==\n")
-	  (if redo (insert (pp-to-string (traad-enumerate redo))))
-	  buff)))))
+        (let* ((undo (assoc-default 'history (request-response-data (elt inputs 0))))
+               (redo (assoc-default 'history (request-response-data (elt inputs 1))))
+               (buff (get-buffer-create "*traad-history*")))
+          (set-buffer buff)
+          (erase-buffer)
+          (insert "== UNDO HISTORY ==\n")
+          (if undo (insert (pp-to-string (traad-enumerate undo))))
+          (insert "\n")
+          (insert "== REDO HISTORY ==\n")
+          (if redo (insert (pp-to-string (traad-enumerate redo))))
+          buff)))))
 
 ;;;###autoload
 (defun traad-display-history ()
@@ -376,7 +317,7 @@ necessary. Return the history buffer."
     (traad-update-history-buffer)
     (deferred:nextc it
       (lambda (buffer)
-	(switch-to-buffer buffer)))))
+        (switch-to-buffer buffer)))))
 
 (defun traad-history-info-core (location)
   "Display information on a single undo/redo operation."
@@ -388,15 +329,15 @@ necessary. Return the history buffer."
 
     (deferred:nextc it
       (lambda (rsp)
-	(let ((buff (get-buffer-create "*traad-change*"))
-	      (info (assoc-default 'info (request-response-data rsp))))
-	  (switch-to-buffer buff)
-	  (diff-mode)
-	  (erase-buffer)
-	  (insert "Description: " (cdr (assoc 'description info)) "\n"
-		  "Time: " (number-to-string (cdr (assoc 'time info))) "\n"
-		  "Change:\n"
-		  (cdr (assoc 'full_change info))))))))
+        (let ((buff (get-buffer-create "*traad-change*"))
+              (info (assoc-default 'info (request-response-data rsp))))
+          (switch-to-buffer buff)
+          (diff-mode)
+          (erase-buffer)
+          (insert "Description: " (cdr (assoc 'description info)) "\n"
+                  "Time: " (number-to-string (cdr (assoc 'time info))) "\n"
+                  "Change:\n"
+                  (cdr (assoc 'full_change info))))))))
 
 ;;;###autoload
 (defun traad-undo-info (i)
@@ -427,11 +368,11 @@ necessary. Return the history buffer."
    (list
     (read-string "New file name: ")))
   (lexical-let ((new-name new-name)
-		(data (list (cons "name" new-name)
-			    (cons "path" (buffer-file-name))))
-		(old-buff (current-buffer))
-		(dirname (file-name-directory buffer-file-name))
-		(extension (file-name-extension buffer-file-name)))
+                (data (list (cons "name" new-name)
+                            (cons "path" (buffer-file-name))))
+                (old-buff (current-buffer))
+                (dirname (file-name-directory buffer-file-name))
+                (extension (file-name-extension buffer-file-name)))
     (deferred:$
       (traad-deferred-request
        "/refactor/rename"
@@ -481,9 +422,9 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-number "Index: ")))
-					; TODO: Surely there's a
-					; better way to construct
-					; these lists...
+                                        ; TODO: Surely there's a
+                                        ; better way to construct
+                                        ; these lists...
   (traad--fetch-perform-refresh
    "/refactor/remove_argument"
    :data (list (cons "arg_index" index)
@@ -604,12 +545,12 @@ necessary. Return the history buffer."
    (list
     (read-file-name "Filename: " (buffer-file-name))))
   (mapcar (lambda (f) (funcall f filename))
-	  (list
-	   'traad-expand-star-imports
-	   'traad-relatives-to-absolutes
-	   'traad-froms-to-imports
-	   'traad-handle-long-imports
-	   'traad-organize-imports)))
+          (list
+           'traad-expand-star-imports
+           'traad-relatives-to-absolutes
+           'traad-froms-to-imports
+           'traad-handle-long-imports
+           'traad-organize-imports)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; findit
@@ -621,10 +562,10 @@ necessary. Return the history buffer."
 ;;   Returns a deferred request. The 'data' key in the JSON hold the
 ;;   location data in the form:
 
-;; 	[[path, [region-start, region-stop], offset, unsure, lineno], . . .]
+;;  [[path, [region-start, region-stop], offset, unsure, lineno], . . .]
 ;;   "
 ;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-;; 			    (cons "path" (buffer-file-name)))))
+;;              (cons "path" (buffer-file-name)))))
 ;;     (traad-deferred-request
 ;;      "/findit/occurrences"
 ;;      :data data
@@ -636,10 +577,10 @@ necessary. Return the history buffer."
 ;;   Returns a deferred request. The 'data' key in the JSON hold the
 ;;   location data in the form:
 
-;; 	[[path, [region-start, region-stop], offset, unsure, lineno], . . .]
+;;  [[path, [region-start, region-stop], offset, unsure, lineno], . . .]
 ;;   "
 ;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-;; 			    (cons "path" (buffer-file-name)))))
+;;              (cons "path" (buffer-file-name)))))
 ;;     (traad-deferred-request
 ;;      "/findit/implementations"
 ;;      :data data
@@ -651,10 +592,10 @@ necessary. Return the history buffer."
 ;;   Returns a deferred request. The 'data' key in the JSON hold the location in
 ;;   the form:
 
-;; 	[path, [region-start, region-stop], offset, unsure, lineno]
+;;  [path, [region-start, region-stop], offset, unsure, lineno]
 ;;   "
 ;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-;; 			    (cons "path" (buffer-file-name)))))
+;;              (cons "path" (buffer-file-name)))))
 ;;     (traad-deferred-request
 ;;      "/findit/definition"
 ;;      :data data
@@ -737,30 +678,30 @@ necessary. Return the history buffer."
 ;;   (deferred:$
 ;;     (deferred:parallel
 ;;       (deferred:$
-;; 	(traad-find-definition pos)
-;; 	(deferred:nextc it
-;; 	  'request-response-data)
-;; 	(deferred:nextc it
-;; 	  (lambda (x) (assoc-default 'data x))))
+;;  (traad-find-definition pos)
+;;  (deferred:nextc it
+;;    'request-response-data)
+;;  (deferred:nextc it
+;;    (lambda (x) (assoc-default 'data x))))
 ;;       (deferred:$
-;; 	(traad-get-root)
-;; 	(deferred:nextc it
-;; 	  'request-response-data)
-;; 	(deferred:nextc it
-;; 	  (lambda (x) (assoc-default 'root x)))))
+;;  (traad-get-root)
+;;  (deferred:nextc it
+;;    'request-response-data)
+;;  (deferred:nextc it
+;;    (lambda (x) (assoc-default 'root x)))))
 
 ;;     (deferred:nextc it
 ;;       (lambda (input)
-;; 	(let ((loc (elt input 0)))
-;; 	  (if (not loc)
-;; 	      (message "No definition found.")
-;; 	    (letrec ((path (elt loc 0))
-;; 		     (root (elt input 1))
-;; 		     (abspath (if (file-name-absolute-p path) path (concat root "/" path)))
-;; 		     (lineno (elt loc 4)))
-;; 	      (goto-line
-;; 	       lineno
-;; 	       (find-file-other-window abspath)))))))))
+;;  (let ((loc (elt input 0)))
+;;    (if (not loc)
+;;        (message "No definition found.")
+;;      (letrec ((path (elt loc 0))
+;;           (root (elt input 1))
+;;           (abspath (if (file-name-absolute-p path) path (concat root "/" path)))
+;;           (lineno (elt loc 4)))
+;;        (goto-line
+;;         lineno
+;;         (find-file-other-window abspath)))))))))
 
 ;; ;;;###autoload
 ;; (defun traad-findit (type)
@@ -788,12 +729,12 @@ necessary. Return the history buffer."
 This returns an alist like ((completions . [[name documentation scope type]]) (result . \"success\"))"
   (interactive "d")
   (let ((data (list (cons "offset" (traad-adjust-point pos))
-		    (cons "path" (buffer-file-name))))
-	(request-backend 'url-retrieve))
+                    (cons "path" (buffer-file-name))))
+        (request-backend 'url-retrieve))
     (request-response-data
      (request
       (concat "http://" traad-host ":" (number-to-string traad-server-port-actual)
-	      "/code_assist/completions")
+              "/code_assist/completions")
       :headers '(("Content-Type" . "application/json"))
       :data (json-encode data)
       :sync t
@@ -803,8 +744,8 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 
 (defun traad-display-in-buffer (msg buffer)
   (let ((cbuff (current-buffer))
-	(buff (get-buffer-create buffer))
-	(inhibit-read-only 't))
+        (buff (get-buffer-create buffer))
+        (inhibit-read-only 't))
     (pop-to-buffer buff)
     (erase-buffer)
     (insert msg)
@@ -816,17 +757,17 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
   Returns a deferred which produces the calltip string.
   "
   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
+                            (cons "path" (buffer-file-name)))))
     (deferred:$
       (traad-deferred-request
        "/code_assist/calltip"
        :data data
        :type "POST")
       (deferred:nextc it
-	(lambda (req)
-	  (assoc-default
-	   'calltip
-	   (request-response-data req)))))))
+        (lambda (req)
+          (assoc-default
+           'calltip
+           (request-response-data req)))))))
 
 ;;;###autoload
 (defun traad-display-calltip (pos)
@@ -836,11 +777,11 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
     (traad-get-calltip pos)
     (deferred:nextc it
       (lambda (calltip)
-	(if calltip
-	    (traad-display-in-buffer
-	     calltip
-	     "*traad-calltip*")
-	  (message "No calltip available."))))))
+        (if calltip
+            (traad-display-in-buffer
+             calltip
+             "*traad-calltip*")
+          (message "No calltip available."))))))
 
 ;;;###autoload
 (defun traad-popup-calltip (pos)
@@ -849,11 +790,11 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
     (deferred:$
       (traad-get-calltip pos)
       (deferred:nextc it
-	(lambda (calltip)
-	  (if calltip
-	      (popup-tip
-	       calltip
-	       :point pos)))))))
+        (lambda (calltip)
+          (if calltip
+              (popup-tip
+               calltip
+               :point pos)))))))
 
 (defun traad-get-doc (pos)
   "Get docstring for an object.
@@ -862,7 +803,7 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
   not docstring, the deferred produces nil.
   "
   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-			    (cons "path" (buffer-file-name)))))
+                            (cons "path" (buffer-file-name)))))
     (deferred:$
 
       (traad-deferred-request
@@ -871,10 +812,10 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
        :type "POST")
 
       (deferred:nextc it
-	(lambda (req)
-	  (assoc-default
-	   'doc
-	   (request-response-data req)))))))
+        (lambda (req)
+          (assoc-default
+           'doc
+           (request-response-data req)))))))
 
 ;;;###autoload
 (defun traad-display-doc (pos)
@@ -884,11 +825,11 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
     (traad-get-doc pos)
     (deferred:nextc it
       (lambda (doc)
-	(if doc
-	    (traad-display-in-buffer
-	     doc
-	     "*traad-doc*")
-	  (message "No docstring available."))))))
+        (if doc
+            (traad-display-in-buffer
+             doc
+             "*traad-doc*")
+          (message "No docstring available."))))))
 
 ;;;###autoload
 (defun traad-popup-doc (pos)
@@ -897,11 +838,11 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
     (deferred:$
       (traad-get-doc pos)
       (deferred:nextc it
-	(lambda (doc)
-	  (if doc
-	      (popup-tip
-	       doc
-	       :point pos)))))))
+        (lambda (doc)
+          (if doc
+              (popup-tip
+               doc
+               :point pos)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; low-level support
@@ -964,7 +905,7 @@ refresh affected buffers."
 task-id. Should only be used with URLs that respond with a
 task_id field in the response."
   (lexical-let ((data data)
-		(name name))
+                (name name))
     (deferred:$
 
       (traad-deferred-request
@@ -973,16 +914,16 @@ task_id field in the response."
        :data data)
 
       (deferred:nextc it
-	(lambda (rsp)
-	  (message
-	   "%s started with task-id %s"
-	   name
-	   (assoc-default 'task_id (request-response-data rsp))))))))
+        (lambda (rsp)
+          (message
+           "%s started with task-id %s"
+           name
+           (assoc-default 'task_id (request-response-data rsp))))))))
 
 (defun traad-range (upto)
   (defun range_ (x)
     (if (> x 0)
-	(cons x (range_ (- x 1)))
+        (cons x (range_ (- x 1)))
       (list 0)))
   (nreverse (range_ upto)))
 
@@ -999,7 +940,7 @@ task_id field in the response."
     (insert-file-contents path)
     (split-string (buffer-string) "\n" nil)))
 
-					; TODO: invalidation support?
+                                        ; TODO: invalidation support?
 
 (defconst traad--install-server-command
   "pip install --upgrade traad")
@@ -1015,7 +956,7 @@ By default, then, it installs traad into
 `PYTHON-ENVIRONMENT_DIRECTORY/traad`."
   (interactive)
   (ignore-errors
-   (venv-mkvirtualenv traad-environment-name))
+    (venv-mkvirtualenv traad-environment-name))
   (venv-with-virtualenv-shell-command
    traad-environment-name
    traad--install-server-command))
