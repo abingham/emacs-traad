@@ -490,7 +490,25 @@ necessary. Return the history buffer."
                (cons "path" (buffer-file-name))
                (cons "offset" (traad-adjust-point (point))))))
 
-;; TODO: add-argument
+;;;###autoload
+(defun traad-add-argument (index name default value)
+  "Add a new argument at INDEX in the signature at point."
+  (interactive
+   (list
+    (read-number "Index: ")
+    (read-string "Name: ")
+    (read-string "Default: ")
+    (read-string "Value: ")))
+  (traad--fetch-perform-refresh
+   "/refactor/add_argument"
+   :data (list (cons "arg_index" index)
+               (cons "name" name)
+               (cons "default" default)
+               (cons "value" value)
+               (cons "path" (buffer-file-name))
+               (cons "offset" (traad-adjust-point (point))))))
+
+
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; inline support
