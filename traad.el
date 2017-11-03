@@ -801,14 +801,14 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
       :data (json-encode data)
       :type "POST"))))
 
-;; (defun traad-display-in-buffer (msg buffer)
-;;   (let ((cbuff (current-buffer))
-;; 	(buff (get-buffer-create buffer))
-;; 	(inhibit-read-only 't))
-;;     (pop-to-buffer buff)
-;;     (erase-buffer)
-;;     (insert msg)
-;;     (pop-to-buffer cbuff)))
+(defun traad-display-in-buffer (msg buffer)
+  (let ((cbuff (current-buffer))
+	(buff (get-buffer-create buffer))
+	(inhibit-read-only 't))
+    (pop-to-buffer buff)
+    (erase-buffer)
+    (insert msg)
+    (pop-to-buffer cbuff)))
 
 ;; (defun traad-get-calltip (pos)
 ;;   "Get the calltip for an object.
@@ -855,40 +855,40 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 ;; 	       calltip
 ;; 	       :point pos)))))))
 
-;; (defun traad-get-doc (pos)
-;;   "Get docstring for an object.
+(defun traad-get-doc (pos)
+  "Get docstring for an object.
 
-;;   Returns a deferred which produces the doc string. If there is
-;;   not docstring, the deferred produces nil.
-;;   "
-;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-;; 			    (cons "path" (buffer-file-name)))))
-;;     (deferred:$
+  Returns a deferred which produces the doc string. If there is
+  not docstring, the deferred produces nil.
+  "
+  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+			    (cons "path" (buffer-file-name)))))
+    (deferred:$
 
-;;       (traad-deferred-request
-;;        "/code_assist/doc"
-;;        :data data
-;;        :type "POST")
+      (traad-deferred-request
+       "/code_assist/doc"
+       :data data
+       :type "POST")
 
-;;       (deferred:nextc it
-;; 	(lambda (req)
-;; 	  (assoc-default
-;; 	   'doc
-;; 	   (request-response-data req)))))))
+      (deferred:nextc it
+	(lambda (req)
+	  (assoc-default
+	   'doc
+	   (request-response-data req)))))))
 
-;; ;;;###autoload
-;; (defun traad-display-doc (pos)
-;;   "Display docstring for an object."
-;;   (interactive "d")
-;;   (deferred:$
-;;     (traad-get-doc pos)
-;;     (deferred:nextc it
-;;       (lambda (doc)
-;; 	(if doc
-;; 	    (traad-display-in-buffer
-;; 	     doc
-;; 	     "*traad-doc*")
-;; 	  (message "No docstring available."))))))
+;;;###autoload
+(defun traad-display-doc (pos)
+  "Display docstring for an object."
+  (interactive "d")
+  (deferred:$
+    (traad-get-doc pos)
+    (deferred:nextc it
+      (lambda (doc)
+	(if doc
+	    (traad-display-in-buffer
+	     doc
+	     "*traad-doc*")
+	  (message "No docstring available."))))))
 
 ;; ;;;###autoload
 ;; (defun traad-popup-doc (pos)
