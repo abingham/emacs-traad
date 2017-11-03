@@ -782,24 +782,24 @@ necessary. Return the history buffer."
 ;; code assist
 
 ;;;###autoload
-;; (defun traad-code-assist (pos)
-;;   "Get possible completions at POS in current buffer.
+(defun traad-code-assist (pos)
+  "Get possible completions at POS in current buffer.
 
-;; This returns an alist like ((completions . [[name documentation scope type]]) (result . \"success\"))"
-;;   (interactive "d")
-;;   (let ((data (list (cons "offset" (traad-adjust-point pos))
-;; 		    (cons "path" (buffer-file-name))))
-;; 	(request-backend 'url-retrieve))
-;;     (request-response-data
-;;      (request
-;;       (concat "http://" traad-host ":" (number-to-string traad-server-port-actual)
-;; 	      "/code_assist/completions")
-;;       :headers '(("Content-Type" . "application/json"))
-;;       :data (json-encode data)
-;;       :sync t
-;;       :parser 'json-read
-;;       :data (json-encode data)
-;;       :type "POST"))))
+This returns an alist like ((completions . [[name documentation scope type]]) (result . \"success\"))"
+  (interactive "d")
+  (let ((data (list (cons "offset" (traad-adjust-point pos))
+		    (cons "path" (buffer-file-name))))
+	(request-backend 'url-retrieve))
+    (request-response-data
+     (request
+      (concat "http://" traad-host ":" (number-to-string traad-server-port-actual)
+	      "/code_assist/completions")
+      :headers '(("Content-Type" . "application/json"))
+      :data (json-encode data)
+      :sync t
+      :parser 'json-read
+      :data (json-encode data)
+      :type "POST"))))
 
 ;; (defun traad-display-in-buffer (msg buffer)
 ;;   (let ((cbuff (current-buffer))
