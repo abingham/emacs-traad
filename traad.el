@@ -666,54 +666,54 @@ necessary. Return the history buffer."
 ;;   Call FUNC with POS and fill up the buffer BUFF-NAME with the results."
 ;;   (lexical-let ((buff-name buff-name))
 ;;     (deferred:$
-;; 					; Fetch in parallel...
+;;                                         ; Fetch in parallel...
 ;;       (deferred:parallel
 
-;; 					; ...the occurrence data...
-;; 	(deferred:$
-;; 	  (apply func (list pos))
-;; 	  (deferred:nextc it
-;; 	    'request-response-data)
-;; 	  (deferred:nextc it
-;; 	    (lambda (x) (assoc-default 'data x))))
+;;                                         ; ...the occurrence data...
+;;         (deferred:$
+;;           (apply func (list pos))
+;;           (deferred:nextc it
+;;             'request-response-data)
+;;           (deferred:nextc it
+;;             (lambda (x) (assoc-default 'data x))))
 
-;; 					; ...and the project root.
-;; 	(deferred:$
-;; 	  (traad-get-root)
-;; 	  (deferred:nextc it
-;; 	    'request-response-data)
-;; 	  (deferred:nextc it
-;; 	    (lambda (x) (assoc-default 'root x)))))
+;;                                         ; ...and the project root.
+;;         (deferred:$
+;;           (traad-get-root)
+;;           (deferred:nextc it
+;;             'request-response-data)
+;;           (deferred:nextc it
+;;             (lambda (x) (assoc-default 'root x)))))
 
 ;;       (deferred:nextc it
-;; 	(lambda (input)
-;; 	  (let ((locs (elt input 0)) ; the location vector
-;; 		(root (elt input 1)) ; the project root
-;; 		(buff (get-buffer-create buff-name))
-;; 		(inhibit-read-only 't))
-;; 	    (pop-to-buffer buff)
-;; 	    (erase-buffer)
+;;         (lambda (input)
+;;           (let ((locs (elt input 0)) ; the location vector
+;;                 (root (elt input 1)) ; the project root
+;;                 (buff (get-buffer-create buff-name))
+;;                 (inhibit-read-only 't))
+;;             (pop-to-buffer buff)
+;;             (erase-buffer)
 
-;; 					; For each location, add a
-;; 					; line to the buffer.  TODO:
-;; 					; Is there a "dovector" we can
-;; 					; use? This is a bit fugly.
-;; 	    (mapcar
-;; 	     (lambda (loc)
-;; 	       (lexical-let* ((path (elt loc 0))
-;; 			      (abspath (concat root "/" path))
-;; 			      (lineno (elt loc 4))
-;; 			      (code (nth (- lineno 1) (traad-read-lines abspath))))
-;; 		 (insert-button
-;; 		  (format "%s:%s: %s\n"
-;; 			  path
-;; 			  lineno
-;; 			  code)
-;; 		  'action (lambda (x)
-;; 			    (goto-line
-;; 			     lineno
-;; 			     (find-file-other-window abspath))))))
-;; 	     locs)))))))
+;;                                         ; For each location, add a
+;;                                         ; line to the buffer.  TODO:
+;;                                         ; Is there a "dovector" we can
+;;                                         ; use? This is a bit fugly.
+;;             (mapcar
+;;              (lambda (loc)
+;;                (lexical-let* ((path (elt loc 0))
+;;                               (abspath (concat root "/" path))
+;;                               (lineno (elt loc 4))
+;;                               (code (nth (- lineno 1) (traad-read-lines abspath))))
+;;                  (insert-button
+;;                   (format "%s:%s: %s\n"
+;;                           path
+;;                           lineno
+;;                           code)
+;;                   'action (lambda (x)
+;;                             (goto-line
+;;                              lineno
+;;                              (find-file-other-window abspath))))))
+;;              locs)))))))
 
 
 ;; ;;;###autoload
