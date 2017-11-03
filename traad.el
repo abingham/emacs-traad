@@ -115,7 +115,7 @@ Note that for python3 projects this commonly needs to be set to `traad3'."
   :type '(boolean)
   :group 'traad)
 
-(defconst traad-required-protocol-version 2
+(defconst traad-required-protocol-version 3
   "The required protocol version.")
 
 (defcustom traad-environment-name "traad"
