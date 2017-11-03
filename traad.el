@@ -810,50 +810,50 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
     (insert msg)
     (pop-to-buffer cbuff)))
 
-;; (defun traad-get-calltip (pos)
-;;   "Get the calltip for an object.
+(defun traad-get-calltip (pos)
+  "Get the calltip for an object.
 
-;;   Returns a deferred which produces the calltip string.
-;;   "
-;;   (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
-;; 			    (cons "path" (buffer-file-name)))))
-;;     (deferred:$
-;;       (traad-deferred-request
-;;        "/code_assist/calltip"
-;;        :data data
-;;        :type "POST")
-;;       (deferred:nextc it
-;; 	(lambda (req)
-;; 	  (assoc-default
-;; 	   'calltip
-;; 	   (request-response-data req)))))))
+  Returns a deferred which produces the calltip string.
+  "
+  (lexical-let ((data (list (cons "offset" (traad-adjust-point pos))
+			    (cons "path" (buffer-file-name)))))
+    (deferred:$
+      (traad-deferred-request
+       "/code_assist/calltip"
+       :data data
+       :type "POST")
+      (deferred:nextc it
+	(lambda (req)
+	  (assoc-default
+	   'calltip
+	   (request-response-data req)))))))
 
-;; ;;;###autoload
-;; (defun traad-display-calltip (pos)
-;;   "Display calltip for an object."
-;;   (interactive "d")
-;;   (deferred:$
-;;     (traad-get-calltip pos)
-;;     (deferred:nextc it
-;;       (lambda (calltip)
-;; 	(if calltip
-;; 	    (traad-display-in-buffer
-;; 	     calltip
-;; 	     "*traad-calltip*")
-;; 	  (message "No calltip available."))))))
+;;;###autoload
+(defun traad-display-calltip (pos)
+  "Display calltip for an object."
+  (interactive "d")
+  (deferred:$
+    (traad-get-calltip pos)
+    (deferred:nextc it
+      (lambda (calltip)
+	(if calltip
+	    (traad-display-in-buffer
+	     calltip
+	     "*traad-calltip*")
+	  (message "No calltip available."))))))
 
-;; ;;;###autoload
-;; (defun traad-popup-calltip (pos)
-;;   (interactive "d")
-;;   (lexical-let ((pos pos))
-;;     (deferred:$
-;;       (traad-get-calltip pos)
-;;       (deferred:nextc it
-;; 	(lambda (calltip)
-;; 	  (if calltip
-;; 	      (popup-tip
-;; 	       calltip
-;; 	       :point pos)))))))
+;;;###autoload
+(defun traad-popup-calltip (pos)
+  (interactive "d")
+  (lexical-let ((pos pos))
+    (deferred:$
+      (traad-get-calltip pos)
+      (deferred:nextc it
+	(lambda (calltip)
+	  (if calltip
+	      (popup-tip
+	       calltip
+	       :point pos)))))))
 
 (defun traad-get-doc (pos)
   "Get docstring for an object.
@@ -890,18 +890,18 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 	     "*traad-doc*")
 	  (message "No docstring available."))))))
 
-;; ;;;###autoload
-;; (defun traad-popup-doc (pos)
-;;   (interactive "d")
-;;   (lexical-let ((pos pos))
-;;     (deferred:$
-;;       (traad-get-doc pos)
-;;       (deferred:nextc it
-;; 	(lambda (doc)
-;; 	  (if doc
-;; 	      (popup-tip
-;; 	       doc
-;; 	       :point pos)))))))
+;;;###autoload
+(defun traad-popup-doc (pos)
+  (interactive "d")
+  (lexical-let ((pos pos))
+    (deferred:$
+      (traad-get-doc pos)
+      (deferred:nextc it
+	(lambda (doc)
+	  (if doc
+	      (popup-tip
+	       doc
+	       :point pos)))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; low-level support
