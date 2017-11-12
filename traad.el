@@ -90,9 +90,7 @@
   "The name of the traad server program.
 
 If this is nil (default) then the server found in the
-`traad-environment-name' virtual environment is used.
-
-Note that for python3 projects this commonly needs to be set to `traad3'."
+`traad-environment-name' virtual environment is used."
   :type '(repeat string)
   :group 'traad)
 
@@ -131,10 +129,13 @@ want to use."
   (or traad-server-program
       (venv-with-virtualenv
        traad-environment-name
-       (let ((script (or (funcall 'executable-find "traad")
-                         (funcall 'executable-find "traad3"))))
-         (when script (list script))))))
+       (let ((script (funcall 'executable-find "traad")))
+         (if script
+             (list script)
+           (error "No traad executable found"))))))
 
+;; represents a single server instance. We may be running many for different
+;; projects.
 (cl-defstruct traad--server
   (host "" :read-only t)
   (proc nil :read-only t))
