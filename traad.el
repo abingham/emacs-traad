@@ -450,9 +450,9 @@ necessary. Return the history buffer."
   (traad--fetch-perform-refresh
    (buffer-file-name)
    "/refactor/inline"
-   (list
-    (cons "path" (buffer-file-name))
-    (cons "offset" (traad--adjust-point (point))))))
+   :data (list
+          (cons "path" (buffer-file-name))
+          (cons "offset" (traad--adjust-point (point))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; extraction support
