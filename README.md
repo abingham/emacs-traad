@@ -23,8 +23,7 @@ default location::
 M-x traad-install-server
 ```
 
-The server is installed into a virtual environment
-using
+The server is installed into a virtual environment using
 [virtualenvwrapper.el](https://github.com/porterjamesj/virtualenvwrapper.el).
 You can control this installation using **`traad-environment-name`** which
 specifies the name of the virtual environment. By default it's "traad", and

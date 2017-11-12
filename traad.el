@@ -78,6 +78,24 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; user variables
 
+(defcustom traad-save-unsaved-buffers 'ask
+  "What to do when there are unsaved buffers before a refactoring.
+
+Options are:
+
+`ask'
+      Ask the user if buffers should be saved.
+
+`always'
+     Always save modified buffers without asking.
+
+`never'
+     Never save unmodified buffers."
+  :type '(choice (const :tag "Ask the user" ask)
+                 (const :tag "Always save changes" always)
+                 (const :tag "Never save changes" never))
+  :risky t)
+
 (defgroup traad nil
   "A Python refactoring tool."
   :group 'tools
@@ -918,41 +936,66 @@ This will start a new server if necessary.
   (let ((host (traad--get-host for-path)))
     (concat "http://" host location)))
 
+(defun traad--save-all ()
+  "Save all modified buffers without confirmation and return non-`nil'."
+  (save-some-buffers 'no-confirm)
+  'saved)
+
+(defun traad--all-changes-saved ()
+  "Determine if all unsaved changes are changed.
+
+This checks `traad-save-unsaved-buffers' to know how to behave
+when there are modified buffers. This returns non-`nil' only if
+there were no modified buffers or if any modified buffers were
+saved in the process of this function.
+"
+  (let ((save-all (lambda () (save-some-buffers 'no-confirm) t)))
+    (or
+     (not (-any 'buffer-modified-p (buffer-list)))
+     (case traad-save-unsaved-buffers
+       ('never nil)
+       ('always
+        (funcall save-all))
+       ('ask
+        (and (yes-or-no-p "Save modified buffers? ")
+             (funcall save-all)))))))
+
 (defun* traad--fetch-perform-refresh (for-path location &key (data '()))
   "Perform common refactoring path: fetch changes from
 `location' (passing `data' as a payload), perform them, and
 refresh affected buffers."
   ;; TODO: check for non-success and lack of 'changes key
-  (let ((response nil) (pth for-path))
-    (deferred:$
+  (when (traad--all-changes-saved)
+    (let ((response nil) (pth for-path))
+      (deferred:$
 
-      ;; Get the changes
-      (traad--deferred-request
-       pth
-       location
-       :type "POST"
-       :data data)
+        ;; Get the changes
+        (traad--deferred-request
+         pth
+         location
+         :type "POST"
+         :data data)
 
-      ;; Perform the changes
-      (deferred:nextc it
-        (lambda (rsp)
-          (setq response (request-response-data rsp))
-          (traad--deferred-request
-           pth
-           "/refactor/perform"
-           :type "POST"
-           :data response)))
+        ;; Perform the changes
+        (deferred:nextc it
+          (lambda (rsp)
+            (setq response (request-response-data rsp))
+            (traad--deferred-request
+             pth
+             "/refactor/perform"
+             :type "POST"
+             :data response)))
 
-      ;; Force refresh of buffers in the listed changes
-      ;; TODO: What if the open buffers have unsaved changes?
-      (deferred:nextc it
-        (lambda (rsp)
-          (let ((changeset (assoc-default 'changes response)))
-            (dolist (path (traad--change-set-to-paths changeset))
-              (message "reverting: %s" path)
-              (let ((buff (get-file-buffer path)))
-                (if buff
-                    (with-current-buffer buff (revert-buffer :ignore-auto :no-confirm)))))))))))
+        ;; Force refresh of buffers in the listed changes
+        ;; TODO: What if the open buffers have unsaved changes?
+        (deferred:nextc it
+          (lambda (rsp)
+            (let ((changeset (assoc-default 'changes response)))
+              (dolist (path (traad--change-set-to-paths changeset))
+                (message "reverting: %s" path)
+                (let ((buff (get-file-buffer path)))
+                  (if buff
+                      (with-current-buffer buff (revert-buffer :ignore-auto :no-confirm))))))))))))
 
 (defun* traad--deferred-request (for-path location &key (type "GET") (data '()))
   (let ((request-backend 'url-retrieve))
