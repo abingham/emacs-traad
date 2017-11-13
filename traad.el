@@ -951,7 +951,11 @@ saved in the process of this function.
 "
   (let ((save-all (lambda () (save-some-buffers 'no-confirm) t)))
     (or
-     (not (-any 'buffer-modified-p (buffer-list)))
+     (not (-any
+           (lambda (buff)
+             (and (buffer-file-name buff)
+                  (buffer-modified-p buff)))
+           (buffer-list)))
      (case traad-save-unsaved-buffers
        ('never nil)
        ('always
