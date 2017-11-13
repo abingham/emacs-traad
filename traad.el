@@ -238,27 +238,28 @@ Returns `traad--server' struct.
 
 (defun traad--unredo (location idx)
   "Common implementation for undo and redo."
-  (lexical-let ((data (list (cons "index" idx))))
+  (when (traad--all-changes-saved)
+    (lexical-let ((data (list (cons "index" idx))))
 
-    (deferred:$
+      (deferred:$
 
-      (traad--deferred-request
-       (buffer-file-name)
-       location
-       :data data
-       :type "POST")
+        (traad--deferred-request
+         (buffer-file-name)
+         location
+         :data data
+         :type "POST")
 
-      (deferred:nextc it
-        (lambda (rsp)
-          (let* ((response (request-response-data rsp))
-                 (changesets (assoc-default 'changes response)))
-            (-map
-             (lambda (changeset)
-               (dolist (path (traad--change-set-to-paths changeset))
-                 (let ((buff (get-file-buffer path)))
-                   (if buff
-                       (with-current-buffer buff (revert-buffer t t))))))
-             changesets))))))
+        (deferred:nextc it
+          (lambda (rsp)
+            (let* ((response (request-response-data rsp))
+                   (changesets (assoc-default 'changes response)))
+              (-map
+               (lambda (changeset)
+                 (dolist (path (traad--change-set-to-paths changeset))
+                   (let ((buff (get-file-buffer path)))
+                     (if buff
+                         (with-current-buffer buff (revert-buffer t t))))))
+               changesets)))))))
   )
 
 ;;;###autoload
