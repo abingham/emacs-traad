@@ -491,6 +491,18 @@ necessary. Return the history buffer."
           (cons "parameter" parameter))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; encapsulate field
+
+(defun traad-encapsulate-field ()
+  (interactive)
+  (traad--fetch-perform-refresh
+   (buffer-file-name)
+   "/refactor/encapsulate_field"
+   :data (list
+          (cons "path" (buffer-file-name))
+          (cons "offset" (traad--adjust-point (point))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; extraction support
 
 (defun traad--extract-core (location name begin end)
