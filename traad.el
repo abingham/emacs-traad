@@ -475,6 +475,22 @@ necessary. Return the history buffer."
           (cons "offset" (traad--adjust-point (point))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; introduce parameter
+
+(defun traad-introduce-parameter (parameter)
+  (interactive
+   (list
+    (read-string "Parameter: ")))
+
+  (traad--fetch-perform-refresh
+   (buffer-file-name)
+   "/refactor/introduce_parameter"
+   :data (list
+          (cons "path" (buffer-file-name))
+          (cons "offset" (traad--adjust-point (point)))
+          (cons "parameter" parameter))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; extraction support
 
 (defun traad--extract-core (location name begin end)
