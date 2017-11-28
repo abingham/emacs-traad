@@ -3,7 +3,7 @@
 ;; Copyright (c) 2012-2017 Austin Bingham
 ;;
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
-;; Version: 0.10
+;; Version: 1.0.0
 ;; URL: https://github.com/abingham/traad
 ;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123"))
 ;;
@@ -498,6 +498,18 @@ necessary. Return the history buffer."
   (traad--fetch-perform-refresh
    (buffer-file-name)
    "/refactor/encapsulate_field"
+   :data (list
+          (cons "path" (buffer-file-name))
+          (cons "offset" (traad--adjust-point (point))))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; local to field
+;;;###autoload
+(defun traad-local-to-field ()
+  (interactive)
+  (traad--fetch-perform-refresh
+   (buffer-file-name)
+   "/refactor/local_to_field"
    :data (list
           (cons "path" (buffer-file-name))
           (cons "offset" (traad--adjust-point (point))))))
