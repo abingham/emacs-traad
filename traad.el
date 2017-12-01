@@ -243,9 +243,12 @@ Returns `traad--server' struct.
               (-map
                (lambda (changeset)
                  (dolist (path (traad--change-set-to-paths changeset))
-                   (let ((buff (get-file-buffer path)))
+                   (let* ((root (traad--find-project-root path))
+                          (full-path (expand-file-name (traad--join-path root path)))
+                          (buff (get-file-buffer full-path)))
                      (if buff
-                         (with-current-buffer buff (revert-buffer t t))))))
+                         (with-current-buffer buff
+                           (revert-buffer :ignore-auto :no-confirm))))))
                changesets)))))))
   )
 
@@ -927,6 +930,13 @@ This starts a new server if necessary."
      ;; We found a live server!
      (t (traad--server-host server)))))
 
+(defun traad--find-project-root (for-path)
+  "Find the root directory for the project containg `for-path'.
+
+Returns `nil' if there is not such project.
+"
+  (locate-dominating-file for-path ".ropeproject"))
+
 (defun traad--get-host (for-path)
   "Get the host of the server responsible for `for-path'.
 
@@ -934,7 +944,7 @@ This will start a new server if necessary.
 "
   (let ((project-root
          (or
-          (locate-dominating-file for-path ".ropeproject")
+          (traad--find-project-root for-path)
           (read-directory-name "Project root? "))))
     (traad--ensure-server project-root)))
 
@@ -1001,15 +1011,16 @@ refresh affected buffers."
              :data response)))
 
         ;; Force refresh of buffers in the listed changes
-        ;; TODO: What if the open buffers have unsaved changes?
         (deferred:nextc it
           (lambda (rsp)
             (let ((changeset (assoc-default 'changes response)))
               (dolist (path (traad--change-set-to-paths changeset))
-                (message "reverting: %s" path)
-                (let ((buff (get-file-buffer path)))
+                (let* ((root (traad--find-project-root path))
+                       (full-path (expand-file-name (traad--join-path root path)))
+                       (buff (get-file-buffer full-path)))
                   (if buff
-                      (with-current-buffer buff (revert-buffer :ignore-auto :no-confirm))))))))))))
+                      (with-current-buffer buff
+                        (revert-buffer :ignore-auto :no-confirm))))))))))))
 
 (defun* traad--deferred-request (for-path location &key (type "GET") (data '()))
   (let ((request-backend 'url-retrieve))
@@ -1083,6 +1094,9 @@ A changeset looks like this:
        (let ((file-change (elt content 1)))
          (elt file-change 0)))
      change-contents)))
+
+(defun traad--join-path (a b)
+  (concat (file-name-as-directory a) b))
 
 (provide 'traad)
 
