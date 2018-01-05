@@ -26,7 +26,7 @@
 ;;
 ;;   cl
 ;;   deferred - https://github.com/kiwanami/emacs-deferred
-;;   json
+;;   jsontraad
 ;;   request - https://github.com/tkf/emacs-request
 ;;   request-deferred - (same as request)
 ;;
@@ -1017,8 +1017,8 @@ refresh affected buffers."
      (traad--construct-url for-path location)
      :type type
      :parser 'json-read
-     :headers '(("Content-Type" . "application/json"))
-     :data (json-encode data))))
+     :headers '(("Content-Type" . "application/json;charset=utf-8"))
+     :data (encode-coding-string (json-encode data) 'utf-8))))
 
 (defun traad--range (upto)
   (defun range_ (x)
