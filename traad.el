@@ -356,39 +356,6 @@ necessary. Return the history buffer."
    (concat "/history/redo_info/" (number-to-string i))))
 
 ;;;###autoload
-(defun traad-rename-current-file (new-name)
-  "Rename the current file/module."
-  (interactive
-   (list
-    (read-string "New file name: ")))
-  ;; TODO: Make this work!
-  (lexical-let ((new-name new-name)
-                (data (list (cons "name" new-name)
-                            (cons "path" (buffer-file-name))))
-                (old-buff (current-buffer))
-                (dirname (file-name-directory buffer-file-name))
-                (extension (file-name-extension buffer-file-name)))
-    (deferred:$
-      (traad--deferred-request
-       (buffer-file-name)
-       "/refactor/rename"
-       :type "POST"
-       :data data)
-
-      ;; TODO: This is a hack. We just assume that the renaming happens and
-      ;; switch to that buffer. The refactoring could fail, and we don't check
-      ;; for that. But it kinda works.
-      (deferred:nextc it
-        (lambda (_)
-          (switch-to-buffer
-           (find-file
-            (expand-file-name
-             (concat new-name "." extension)
-             dirname)))
-          (kill-buffer old-buff)
-          (traad--update-history-buffer))))))
-
-;;;###autoload
 (defun traad-rename (new-name)
   "Rename the object at the current location."
   (interactive
@@ -400,6 +367,33 @@ necessary. Return the history buffer."
    :data (list (cons "name" new-name)
                (cons "path" (buffer-file-name))
                (cons "offset" (traad--adjust-point (point))))))
+
+;;;###autoload
+(defun traad-move-global(dest)
+  "Move the object at the current location to dest."
+  (interactive
+   (list
+    (read-file-name "Destination: " nil nil "confirm")))
+  (traad--fetch-perform-refresh
+   (buffer-file-name)
+   "/refactor/move_global"
+   :data (list (cons "dest" dest)
+               (cons "path" (buffer-file-name))
+               (cons "offset" (traad--adjust-point (point))))))
+
+;;;###autoload
+(defun traad-move-module(dest)
+  "Move the object at the current location to dest."
+  (interactive
+   (list
+    (read-directory-name "Destination: " nil nil "confirm")))
+  (traad--fetch-perform-refresh
+   (buffer-file-name)
+   "/refactor/move_module"
+   :data (list (cons "dest" dest)
+               (cons "path" (buffer-file-name))))
+  ;; TODO: Need to close current buffer and open new one.
+  )
 
 ;;;###autoload
 (defun traad-normalize-arguments ()
