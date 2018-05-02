@@ -394,12 +394,13 @@ necessary. Return the history buffer."
      :data (list (cons "dest" dest)
                  (cons "path" (buffer-file-name))))
 
+    ;; Close current buffer, opening new one on moved file.
     (deferred:nextc it
       (lambda (_)
-        (let ((base_name (file-name-nondirectory (buffer-file-name)))
-              (new_name (concat dest "/" base_name)))
+        (let* ((base_name (file-name-nondirectory (buffer-file-name)))
+               (new_name (expand-file-name (concat dest "/" base_name))))
           (kill-buffer (current-buffer))
-          (switch-to-buffer new_name))))))
+          (switch-to-buffer (find-file new_name)))))))
 
 ;;;###autoload
 (defun traad-normalize-arguments ()
