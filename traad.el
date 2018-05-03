@@ -368,16 +368,22 @@ necessary. Return the history buffer."
                (cons "path" (buffer-file-name))
                (cons "offset" (traad--adjust-point (point))))))
 
+;;;###autoload
 (defun traad-move ()
+  "Call the correct form of `move` based on the type of thing at the point."
   (interactive)
-  (message "thing: %s" (thing-at-point 'symbol)))
+  (pcase (traad-thing-at (point))
+    (module (call-interactively 'traad-move-module))
+    (function (call-interactively 'traad-move-global))
+    (_ (call-interactively 'traad-move-moodule))))
+
 
 ;;;###autoload
 (defun traad-move-global (dest)
   "Move the object at the current location to dest."
   (interactive
    (list
-    (read-file-name "Destination: " nil nil "confirm")))
+    (read-file-name "Destination file: " nil nil "confirm")))
   (traad--fetch-perform-refresh
    (buffer-file-name)
    "/refactor/move_global"
@@ -390,7 +396,7 @@ necessary. Return the history buffer."
   "Move the object at the current location to dest."
   (interactive
    (list
-    (read-directory-name "Destination: " nil nil "confirm")))
+    (read-directory-name "Destination directory: " nil nil "confirm")))
   (deferred:$
     (traad--fetch-perform
      (buffer-file-name)
