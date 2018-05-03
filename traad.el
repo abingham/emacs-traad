@@ -368,6 +368,10 @@ necessary. Return the history buffer."
                (cons "path" (buffer-file-name))
                (cons "offset" (traad--adjust-point (point))))))
 
+(defun traad-move ()
+  (interactive)
+  (message "thing: %s" (thing-at-point 'symbol)))
+
 ;;;###autoload
 (defun traad-move-global (dest)
   "Move the object at the current location to dest."
@@ -754,6 +758,25 @@ necessary. Return the history buffer."
 ;;     (traad-display-implementations (point)))
 ;;    ((equal type "definition")
 ;;     (traad-goto-definition (point)))))
+
+;;;###autoload
+(defun traad-thing-at (pos)
+  "Get the type of the Python thing at `pos'."
+  (interactive "d")
+  (let* ((data (list (cons "offset" (traad--adjust-point pos))
+                     (cons "path" (buffer-file-name))))
+         (request-backend 'url-retrieve)
+         (url (traad--construct-url (buffer-file-name) "/thing_at"))
+         (result (request-response-data
+                  (request
+                   url
+                   :headers '(("Content-Type" . "application/json"))
+                   :data (json-encode data)
+                   :sync t
+                   :parser 'json-read
+                   :data (json-encode data)
+                   :type "POST"))))
+    (alist-get 'thing result)))
 
 ;;;###autoload
 (defun traad-code-assist (pos)
