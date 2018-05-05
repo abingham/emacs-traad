@@ -356,7 +356,7 @@ necessary. Return the history buffer."
    (concat "/history/redo_info/" (number-to-string i))))
 
 ;;;###autoload
-(defun traad-get-imports ()
+(defun traad-auto-import ()
   (interactive)
 
   (deferred:$
@@ -382,7 +382,9 @@ necessary. Return the history buffer."
                  imports))
                (selection (popup-menu*
                             menu-entries
-                           :prompt "Select import")))
+                            :margin-left 1
+                            :margin-right 1
+                            )))
           (save-excursion
             (goto-line location)
             (insert selection)
