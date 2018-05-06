@@ -359,36 +359,42 @@ necessary. Return the history buffer."
 (defun traad-auto-import ()
   (interactive)
 
-  (deferred:$
-    (traad--deferred-request
-     (buffer-file-name)
-     "/auto_import/get_imports"
-     :type "POST"
-     :data (list (cons "path" (buffer-file-name))
-                 (cons "offset" (traad--adjust-point (point)))))
+  (when (traad--all-changes-saved)
 
-    (deferred:nextc it
-      (lambda (rsp)
-        (let* ((buff (get-buffer-create "*traad-get-imports*"))
-               (data (request-response-data rsp))
-               (imports (assoc-default 'imports data))
-               (location (assoc-default 'location data))
-               (menu-entries
-                (mapcar
-                 (lambda (import)
-                   (format "from %s import %s"
-                           (elt import 1)
-                           (elt import 0)))
-                 imports))
-               (selection (popup-menu*
-                            menu-entries
-                            :margin-left 1
-                            :margin-right 1
-                            )))
-          (save-excursion
-            (goto-line location)
-            (insert selection)
-            (insert "\n")))))))
+    (deferred:$
+      (traad--deferred-request
+       (buffer-file-name)
+       "/auto_import/get_imports"
+       :type "POST"
+       :data (list (cons "path" (buffer-file-name))
+                   (cons "offset" (traad--adjust-point (point)))))
+
+      (deferred:nextc it
+        (lambda (rsp)
+          (let* ((buff (get-buffer-create "*traad-get-imports*"))
+                 (data (request-response-data rsp))
+                 (imports (assoc-default 'imports data))
+                 (location (assoc-default 'location data))
+                 (menu-entries
+                  (sort
+                   (mapcar
+                    (lambda (import)
+                      (format "from %s import %s"
+                              (elt import 1)
+                              (elt import 0)))
+                    imports)
+                   'string-lessp)))
+            (if menu-entries
+                (let ((selection (popup-menu*
+                                  menu-entries
+                                  :margin-left 1
+                                  :margin-right 1
+                                  )))
+                  (save-excursion
+                    (goto-line location)
+                    (insert selection)
+                    (insert "\n")))
+              (message "No auto-import candidates (perhaps index is being built)"))))))))
 
 ;;;###autoload
 (defun traad-rename (new-name)
