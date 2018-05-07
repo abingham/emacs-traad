@@ -3,7 +3,7 @@
 ;; Copyright (c) 2012-2017 Austin Bingham
 ;;
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
-;; Version: 1.1.0
+;; Version: 3.1.1
 ;; URL: https://github.com/abingham/traad
 ;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123"))
 ;;
@@ -21,14 +21,6 @@
 ;; https://github.com/abingham/traad.
 ;;
 ;; Installation:
-;;
-;; traad depends on the following packages:
-;;
-;;   cl
-;;   deferred - https://github.com/kiwanami/emacs-deferred
-;;   jsontraad
-;;   request - https://github.com/tkf/emacs-request
-;;   request-deferred - (same as request)
 ;;
 ;; Copy traad.el to some location in your emacs load path. Then add
 ;; "(require 'traad)" to your emacs initialization (.emacs,
