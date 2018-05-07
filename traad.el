@@ -410,6 +410,26 @@ necessary. Return the history buffer."
                (cons "offset" (traad--adjust-point (point))))))
 
 ;;;###autoload
+(defun traad-rename-module (new-name)
+  "Rename the current module."
+  (interactive
+   (list
+    (read-string "New name: ")))
+  (deferred:$
+    (traad--fetch-perform
+     (buffer-file-name)
+     "/refactor/rename"
+     :data (list (cons "name" new-name)
+                 (cons "path" (buffer-file-name))))
+
+    (deferred:nextc it
+      (lambda (_)
+        (let* ((dir-name (file-name-directory (buffer-file-name)))
+               (new-name (expand-file-name (concat dir-name "/" new-name ".py"))))
+          (kill-buffer (current-buffer))
+          (switch-to-buffer (find-file new-name)))))))
+
+;;;###autoload
 (defun traad-move ()
   "Call the correct form of `move` based on the type of thing at the point."
   (interactive)
