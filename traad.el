@@ -428,7 +428,7 @@ necessary. Return the history buffer."
   (pcase (traad-thing-at (point))
     ('module (call-interactively 'traad-move-module))
     ('function (call-interactively 'traad-move-global))
-    (_ (call-interactively 'traad-move-moodule))))
+    (_ (call-interactively 'traad-move-module))))
 
 
 ;;;###autoload
