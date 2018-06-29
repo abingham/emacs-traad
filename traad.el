@@ -399,7 +399,7 @@ necessary. Return the history buffer."
   "Rename the object at the current location."
   (interactive
    (list
-    (read-string "New name: ")))
+    (read-string (format "Rename `%s' to: " (thing-at-point 'symbol)))))
   (traad--fetch-perform-refresh
    (buffer-file-name)
    "/refactor/rename"
@@ -412,7 +412,10 @@ necessary. Return the history buffer."
   "Rename the current module."
   (interactive
    (list
-    (read-string "New name: ")))
+    (read-string (format "Rename `%s' to: "
+                         (file-name-sans-extension
+                          (file-name-nondirectory
+                           (buffer-file-name)))))))
   (deferred:$
     (traad--fetch-perform
      (buffer-file-name)
