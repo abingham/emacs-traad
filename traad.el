@@ -172,6 +172,12 @@ Returns `traad--server' struct.
            (t
             (incf cont)
             (when (< 30 cont) ; timeout after 3 seconds
+              ;; Kill the process so we don't accumulate idle processes.
+              (condition-case nil
+                  ;; Just kill the process, not the buffer. The buffer could
+                  ;; be useful for diagnostics on why there was a timeout.
+                  (kill-process proc)
+                (error nil))
               (error "Server timeout.")))))
         server))))
 
