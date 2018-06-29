@@ -829,7 +829,9 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-thing-at (pos)
-  "Get the type of the Python thing at `pos'."
+  "Get the type of the Python thing at `POS'.
+
+When called interactively, displays the type."
   (interactive "d")
   (let* ((data (list (cons "offset" (traad--adjust-point pos))
                      (cons "path" (buffer-file-name))))
@@ -844,7 +846,18 @@ necessary. Return the history buffer."
                    :parser 'json-read
                    :data (json-encode data)
                    :type "POST"))))
-    (alist-get 'thing result)))
+    (let ((result (alist-get 'thing result)))
+      (when (called-interactively-p)
+        (let ((message-text (if result
+                                (format "Type of `%s': `%s'"
+                                        (save-excursion
+                                          (goto-char pos)
+                                          (thing-at-point 'symbol))
+                                        result)
+                              "No type found for thing at point.")))
+          (message message-text)
+          (popup-tip message-text)))
+      result)))
 
 ;;;###autoload
 (defun traad-code-assist (pos)
