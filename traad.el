@@ -389,7 +389,7 @@ necessary. Return the history buffer."
               (message "No auto-import candidates (perhaps index is being built)"))))))))
 
 ;;;###autoload
-(defun traad-rename (new-name)
+(defun* traad-rename (new-name &key (docstrings t) (in-hierarchy t))
   "Rename the object at the current location."
   (interactive
    (list
@@ -399,7 +399,21 @@ necessary. Return the history buffer."
    "/refactor/rename"
    :data (list (cons "name" new-name)
                (cons "path" (buffer-file-name))
-               (cons "offset" (traad--adjust-point (point))))))
+               (cons "offset" (traad--adjust-point (point)))
+               (cons "in_hierarchy" in-hierarchy)
+               (cons "docs" docstrings))))
+
+;;;###autoload
+(defun traad-rename-advanced (new-name docstrings in-hierarchy)
+  "Rename the thing at point, with advanced options."
+  (interactive
+   (list
+    (read-string (format "Rename `%s' to: " (thing-at-point 'symbol)))
+    (y-or-n-p "Rename in docstrings & comments? ")
+    (y-or-n-p "Rename matching methods in hierarchy (superclass & subclass methods)? ")))
+  (traad-rename new-name
+                :docstrings docstrings
+                :in-hierarchy in-hierarchy))
 
 ;;;###autoload
 (defun traad-rename-module (new-name)
