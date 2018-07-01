@@ -758,7 +758,7 @@ Functions:
   explicit code the function executes. For example:
 
     >>> def do_something():
-    >>>     print sys.version 
+    >>>     print sys.version
     >>>     return C()
 
   Inlining `do_something`, becomes:
@@ -793,12 +793,13 @@ Parameters:
   parameter whenever the parameter is not explicitly referenced.
   For example:
 
-    >>> def f(p1=1, p2=1):
+    >>> def f(p1=1, p2=2):
     >>>     pass
     >>>
-    >>> f(3)
+    >>> f(3, 2)
   1 >>> f()
-    >>> f(3, 4)
+  2 >>> f(3)
+  3 >>> f(p1=5, p2=7)
 
   Inlining `p2`, becomes:
 
@@ -807,7 +808,16 @@ Parameters:
     >>>
     >>> f(3, 2)
   1 >>> f(p2=2)
-    >>> f(3, 4)
+  2 >>> f(3, 2)
+  3 >>> f(5, 7)
+
+[1] and [2] have had explicit calls to the keyword argument
+added. Note that:
+
+  - It prefers positional over keyword calls.
+
+  - It also normalizes the arguments, so [3] is affected. See
+    `traad-normalize-arguments' for more information.
 "
   (interactive)
   (traad--fetch-perform-refresh
