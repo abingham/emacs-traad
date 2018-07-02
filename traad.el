@@ -405,32 +405,32 @@ follows:
     example, let's say we're renaming a variable,
     `var_to_rename`:
 
-     var_to_rename = 'this is a string'                  # [1]
-
-     some_variable = var_to_rename                       # [2]
-
-     # This is an occurrence of `var-to-rename`          # [3]
-
-     def some_function(input_var):
-         '''Docstring that has `var_to_rename` in it.''' # [4]
-         return input_var ** 2
-
-     some_function(var_to_rename)                        # [5]
+    | var_to_rename = 'this is a string'                 # [1]
+    |
+    | some_variable = var_to_rename                      # [2]
+    |
+    | # This is an occurrence of `var-to-rename`         # [3]
+    |
+    | def some_function(input_var):
+    |     '''Docstring that has `var_to_rename` in it.'''# [4]
+    |     return input_var ** 2
+    |
+    | some_function(var_to_rename)                       # [5]
 
     Renaming `var_to_rename` to `new_var_name`, this would
     become:
 
-     new_var_name = 'this is a string'                   # [1]
-
-     some_variable = new_var_name                        # [2]
-
-     # This is an occurrence of `var-to-rename`          # [3]
-
-     def some_function(input_var):
-         '''Docstring that has `var_to_rename` in it.''' # [4]
-         return input_var ** 2
-
-     some_function(new_var_name)                         # [5]
+    | new_var_name = 'this is a string'                  # [1]
+    |
+    | some_variable = new_var_name                       # [2]
+    |
+    | # This is an occurrence of `var-to-rename`         # [3]
+    |
+    | def some_function(input_var):
+    |     '''Docstring that has `var_to_rename` in it.'''# [4]
+    |     return input_var ** 2
+    |
+    | some_function(new_var_name)                        # [5]
 
     Note that [1], [2] & [5] were renamed, but [3] &
     [4] (occurrences in a comment and a docstring) were not
@@ -441,24 +441,24 @@ follows:
     For example, let's say you're renaming some method,
     `method_to_rename`:
 
-     class BaseClass(object):
-         def method_to_rename():                         # [1]
-             print('This is the super class.')
-
-     class DerivedClass(BaseClass):
-         def method_to_rename():                         # [2]
-             print('This is the derived class.')
+    | class BaseClass(object):
+    |     def method_to_rename():                        # [1]
+    |         print('This is the super class.')
+    |
+    | class DerivedClass(BaseClass):
+    |     def method_to_rename():                        # [2]
+    |         print('This is the derived class.')
 
     Renaming `BaseClass.method_to_rename` to
     `BaseClass.new_name`, results in:
 
-     class BaseClass(object):
-         def new_name():                                 # [1]
-             print('This is the super class.')
-
-     class DerivedClass(BaseClass):
-         def method_to_rename():                         # [2]
-             print('This is the derived class.')
+    | class BaseClass(object):
+    |     def new_name():                                # [1]
+    |         print('This is the super class.')
+    |
+    | class DerivedClass(BaseClass):
+    |     def method_to_rename():                        # [2]
+    |         print('This is the derived class.')
 
     The original method, [1], is renamed. Note that the override
     method in the subclass, [2], does not get renamed.
@@ -566,42 +566,42 @@ are called in the correct order. It also removes explicit
 references to keyword arguments whenever possible, replacing them
 with positional references. For example, given the following:
 
-     def this_is_a_test(a, b, c=5):
-         return [a, b, c]
-
-     this_is_a_test(a=10, b=10, c=20)
-     this_is_a_test(20, 20, c=10)
-     this_is_a_test('a', 'b', 'c')
-     this_is_a_test(b='b', c='c', a='a')
-     this_is_a_test(a='a', b='b')
+    | def this_is_a_test(a, b, c=5):
+    |     return [a, b, c]
+    |
+    | this_is_a_test(a=10, b=10, c=20)
+    | this_is_a_test(20, 20, c=10)
+    | this_is_a_test('a', 'b', 'c')
+    | this_is_a_test(b='b', c='c', a='a')
+    | this_is_a_test(a='a', b='b')
 
 Calling `traad-normalize-arguments' on `this_is_a_test`, it would
 become:
 
-     def this_is_a_test(a, b, c=5):
-         return [a, b, c]
-
-     this_is_a_test(10, 10, 20)
-     this_is_a_test(20, 20, 10)
-     this_is_a_test('a', 'b', 'c')
-     this_is_a_test('a', 'b', 'c')
-     this_is_a_test('a', 'b')
+    | def this_is_a_test(a, b, c=5):
+    |     return [a, b, c]
+    |
+    | this_is_a_test(10, 10, 20)
+    | this_is_a_test(20, 20, 10)
+    | this_is_a_test('a', 'b', 'c')
+    | this_is_a_test('a', 'b', 'c')
+    | this_is_a_test('a', 'b')
 
 Note that the arguments in [1] were reordered. A more complex
 case would be:
 
-     def longer_function(a, b, c=10, d=20):
-         return [a, b, c, d]
-
-     longer_function(a='a', b='b', d='d')
+    | def longer_function(a, b, c=10, d=20):
+    |     return [a, b, c, d]
+    |
+    | longer_function(a='a', b='b', d='d')
 
 Calling `traad-normalize-arguments' on `longer_function`, it
 would become:
 
-     def longer_function(a, b, c=10, d=20):
-         return [a, b, c, d]
-
-     longer_function('a', 'b', d='d')
+    | def longer_function(a, b, c=10, d=20):
+    |     return [a, b, c, d]
+    |
+    | longer_function('a', 'b', d='d')
 
 It cannot remove the keyword reference to `d`, so \"d='d'\" is
 retained.
@@ -621,24 +621,24 @@ Also attempts to remove it from any calls to this function.
 
 For example, let's say we have the following:
 
-     def some_function(arg1, arg2, arg3=10, arg4='some string'):
-         '''Do something to some arbitrary parameters.'''
-         first_half = [arg1, arg2]
-         second_half = [arg3, arg4]
-         return first_half, second_half
-
-     some_function(1, 2, arg3=3, arg4='four')
+    | def some_function(arg1, arg2, arg3=10, arg4='some string'):
+    |     '''Do something to some arbitrary parameters.'''
+    |     first_half = [arg1, arg2]
+    |     second_half = [arg3, arg4]
+    |     return first_half, second_half
+    |
+    | some_function(1, 2, arg3=3, arg4='four')
 
 Calling `traad-remove-argument' on `some_function` with an
 `INDEX' of 2, this would become:
 
-     def some_function(arg1, arg2, arg4='some string'):
-         '''Do something to some arbitrary parameters.'''
-         first_half = [arg1, arg2]
-         second_half = [arg3, arg4]                      # [1]
-         return first_half, second_half
-
-     some_function(1, 2, 'four')                         # [2]
+    | def some_function(arg1, arg2, arg4='some string'):
+    |     '''Do something to some arbitrary parameters.'''
+    |     first_half = [arg1, arg2]
+    |     second_half = [arg3, arg4]                     # [1]
+    |     return first_half, second_half
+    |
+    | some_function(1, 2, 'four')                        # [2]
 
 It has removed the third argument, `arg3`.
 
@@ -684,10 +684,10 @@ Takes the following arguments:
 
 For example, let's say we have the following:
 
-     def some_function(arg1, arg2, arg3=10, arg4='some string'):
-         return [arg1, arg2, arg3, arg4]
-
-     some_function(1, 2, arg3=3, arg4='four')
+    | def some_function(arg1, arg2, arg3=10, arg4='some string'):
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 2, arg3=3, arg4='four')
 
 Let's call `traad-add-argument' on some_function. We'll supply
 the following arguments:
@@ -699,10 +699,10 @@ the following arguments:
 
 This will become:
 
-     def some_function(arg1, arg2, arg3=10, new_arg=30, arg4='some string'):
-         return [arg1, arg2, arg3, arg4]
-
-     some_function(1, 2, 3, 50, 'four')                  # [1]
+    | def some_function(arg1, arg2, arg3=10, new_arg=30, arg4='some string'):
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 2, 3, 50, 'four')                 # [1]
 
 Note that references to the function also have their function
 call normalised. See [1], where the explicit keyword reference
@@ -713,18 +713,18 @@ Arguments are always added as keyword arguments. Rope does not
 discriminate based on position, so you can add keyword arguments
 out-of-order. For example, back to the original function:
 
-     def some_function(arg1, arg2, arg3=10, arg4='some string'):
-         return [arg1, arg2, arg3, arg4]
-
-     some_function(1, 2, arg3=3, arg4='four')
+    | def some_function(arg1, arg2, arg3=10, arg4='some string'):
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 2, arg3=3, arg4='four')
 
 Adding the same argument as before at `INDEX' = 1, this will
 become:
 
-     def some_function(arg1, new_arg=30, arg2, arg3=10, arg4='some string'):# [1]
-         return [arg1, arg2, arg3, arg4]
-
-     some_function(1, 50, 2, 3, 'four')
+    | def some_function(arg1, new_arg=30, arg2, arg3=10, arg4='some string'):# [1]
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 50, 2, 3, 'four')
 
 Watch line [1]. Note that the sequence argument `arg2` now
 appears after `new_arg`, a keyword argument, so the function
@@ -757,35 +757,35 @@ Functions:
   Inlining a function replaces calls to a function with the
   explicit code the function executes. For example:
 
-     def do_something():
-         print sys.version
-         return C()
+    | def do_something():
+    |     print sys.version
+    |     return C()
 
   Inlining `do_something`, becomes:
 
-     print sys.version
-     return C()
+    | print sys.version
+    | return C()
 
   Methods, etc. can also be inlined. For example:
 
-     class C(object):
-         var = 1
-
-         def f(self, p):                                 # [1]
-             result = self.var + pn                      # [1]
-             return result                               # [1]
-
-     c = C()
-     x = c.f(1)                                          # [2]
+    | class C(object):
+    |     var = 1
+    |
+    |     def f(self, p):                                # [1]
+    |         result = self.var + pn                     # [1]
+    |         return result                              # [1]
+    |
+    | c = C()
+    | x = c.f(1)                                         # [2]
 
   Inlining `C.f`, becomes:
 
-     class C(object):
-         var = 1
-
-     c = C()
-     result = c.var + pn                                 # [2]
-     x = result                                          # [2]
+    | class C(object):
+    |     var = 1
+    |
+    | c = C()
+    | result = c.var + pn                                # [2]
+    | x = result                                         # [2]
 
 Parameters:
 
@@ -793,23 +793,23 @@ Parameters:
   parameter whenever the parameter is not explicitly referenced.
   For example:
 
-     def f(p1=1, p2=2):
-         pass
-
-     f(3, 2)
-     f()                                                 # [1]
-     f(3)                                                # [2]
-     f(p1=5, p2=7)                                       # [3]
+    | def f(p1=1, p2=2):
+    |     pass
+    |
+    | f(3, 2)
+    | f()                                                # [1]
+    | f(3)                                               # [2]
+    | f(p1=5, p2=7)                                      # [3]
 
   Inlining `p2`, becomes:
 
-     def f(p1=1, p2=2):
-         pass
-
-     f(3, 2)
-     f(p2=2)                                             # [1]
-     f(3, 2)                                             # [2]
-     f(5, 7)                                             # [3]
+    | def f(p1=1, p2=2):
+    |     pass
+    |
+    | f(3, 2)
+    | f(p2=2)                                            # [1]
+    | f(3, 2)                                            # [2]
+    | f(5, 7)                                            # [3]
 
 [1] and [2] have had explicit calls to the keyword argument
 added. Note that:
@@ -834,20 +834,20 @@ added. Note that:
 This extracts a hard-coded value in a function, and introduces it
 as a parameter. An example may be clearer. Let's say we have:
 
-     def multiply(value):
-         result = value * 2
-         return result
-
-     my_var = multiply(10)
+    | def multiply(value):
+    |     result = value * 2
+    |     return result
+    |
+    | my_var = multiply(10)
 
 Let's call `traad-introduce-parameter' when the cursor is on '2'
 and with `PARAMETER' = \"multiplier\". It will become:
 
-     def multiply(value, multiplier=2):
-         result = value * 2
-         return result
-
-     my_var = multiply(10)
+    | def multiply(value, multiplier=2):
+    |     result = value * 2
+    |     return result
+    |
+    | my_var = multiply(10)
 "
   (interactive
    (list
@@ -867,30 +867,30 @@ and with `PARAMETER' = \"multiplier\". It will become:
 
 For example:
 
-     class MyClass(object):
-         def __init__(self):
-             self.my_var = 1
-
-     my_class = MyClass()
-     print(my_class.my_var)                              # [1]
-     my_class.my_var = 5                                 # [2]
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.my_var = 1
+    |
+    | my_class = MyClass()
+    | print(my_class.my_var)                             # [1]
+    | my_class.my_var = 5                                # [2]
 
 Note that [1] is a get operation. [2] is a set operation.
 Encapsulating the field `MyClass.my_var` this becomes:
 
-     class MyClass(object):
-         def __init__(self):
-             self.my_var = 1
-
-         def get_my_var(self):
-             return self.my_var
-
-         def set_my_var(self, value):
-             self.my_var = value
-
-     my_class = MyClass()
-     print(my_class.get_my_var())                        # [1]
-     my_class.set_my_var(5)                              # [2]
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.my_var = 1
+    |
+    |     def get_my_var(self):
+    |         return self.my_var
+    |
+    |     def set_my_var(self, value):
+    |         self.my_var = value
+    |
+    | my_class = MyClass()
+    | print(my_class.get_my_var())                       # [1]
+    | my_class.set_my_var(5)                             # [2]
 
 Note that [1] and [2] have had the getters and setters inserted
 automatically.
@@ -912,39 +912,39 @@ examples may be clearer.
 
 Let's say we have:
 
-     class MyClass(object):
-         def __init__(self):
-             some_var = 1
-             another_var = some_var * 2
+    | class MyClass(object):
+    |     def __init__(self):
+    |         some_var = 1
+    |         another_var = some_var * 2
 
   Calling `local-to-field' on `some_var`, it becomes:
 
-     class MyClass(object):
-         def __init__(self):
-             self.some_var = 1
-             another_var = self.some_var * 2
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.some_var = 1
+    |         another_var = self.some_var * 2
 
 Note that the refactoring is only performed on the variable in
 scope, not on other occurrences of the name. For example, if we
 have:
 
-     class MyClass(object):
-         def __init__(self):
-             some_var = 1
-             another_var = some_var * 2
-
-         def do_something(self):
-             some_var = 200
+    | class MyClass(object):
+    |     def __init__(self):
+    |         some_var = 1
+    |         another_var = some_var * 2
+    |
+    |     def do_something(self):
+    |         some_var = 200
 
   Calling `local-to-field' on `some_var`, it becomes:
 
-     class MyClass(object):
-         def __init__(self):
-             self.some_var = 1
-             another_var = self.some_var * 2
-
-         def do_something(self):
-             some_var = 200
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.some_var = 1
+    |         another_var = self.some_var * 2
+    |
+    |     def do_something(self):
+    |         some_var = 200
 "
   (interactive)
   (traad--fetch-perform-refresh
@@ -961,45 +961,45 @@ changes the code to call it instead.
 
 For example, let's say we have the following code:
 
-     def square(p):
-         return p ** 2
-
-     my_var = 3 ** 2                                     # [1]
-
-     another_var = 4 ** 2                                # [2]
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = 3 ** 2                                    # [1]
+    |
+    | another_var = 4 ** 2                               # [2]
 
   Performing 'use function' on `square`, becomes:
 
-     def square(p):
-         return p ** 2
-
-     my_var = square(3)                                  # [1]
-
-     another_var = square(4)                             # [2]
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = square(3)                                 # [1]
+    |
+    | another_var = square(4)                            # [2]
 
 It also works across files. Let's say we have two files,
 'mod1.py' and 'mod2.py'. They look as follows:
 
     mod1.py:
-     def square(p):
-         return p ** 2
-
-     my_var = 3 ** 2                                     # [1]
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = 3 ** 2                                    # [1]
 
     mod2.py:
-     another_var = 4 ** 2                                # [2]
+    | another_var = 4 ** 2                               # [2]
 
   Performing 'use function' on `square`, the two files become:
 
     mod1.py:
-     def square(p):
-         return p ** 2
-
-     my_var = square(3)                                  # [1]
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = square(3)                                 # [1]
 
     mod2.py:
-     import mod1                                         # [2]
-     another_var = mod1.square(4)                        # [2]
+    | import mod1                                        # [2]
+    | another_var = mod1.square(4)                       # [2]
 "
   (interactive)
   (traad--fetch-perform-refresh
@@ -1027,41 +1027,41 @@ Here are some examples from the Rope documentation.
 ${region_start} and ${region_end} show the selected region for
 extraction:
 
-     def a_func():
-         a = 1
-         b = 2 * a
-         c = ${region_start}a * 2 + b * 3${region_end}   # [1]
+    | def a_func():
+    |     a = 1
+    |     b = 2 * a
+    |     c = ${region_start}a * 2 + b * 3${region_end}  # [1]
 
 After performing extract method (supplying the name `new_func`)
 we'll have:
 
-     def a_func():
-         a = 1
-         b = 2 * a
-         c = new_func(a, b)                              # [1]
-
-     def new_func(a, b):                                 # [2]
-         return a * 2 + b * 3                            # [2]
+    | def a_func():
+    |     a = 1
+    |     b = 2 * a
+    |     c = new_func(a, b)                             # [1]
+    |
+    | def new_func(a, b):                                # [2]
+    |     return a * 2 + b * 3                           # [2]
 
 For multi-line extractions if we have:
 
-     def a_func():
-         a = 1
-         ${region_start}b = 2 * a                        # [1]
-         c = a * 2 + b * 3${region_end}                  # [1]
-         print b, c
+    | def a_func():
+    |     a = 1
+    |     ${region_start}b = 2 * a                       # [1]
+    |     c = a * 2 + b * 3${region_end}                 # [1]
+    |     print b, c
 
 After performing extract method we'll have:
 
-     def a_func():
-         a = 1
-         b, c = new_func(a)                              # [1]
-         print b, c
-
-     def new_func(a):                                    # [2]
-         b = 2 * a                                       # [2]
-         c = a * 2 + b * 3                               # [2]
-         return b, c                                     # [2]
+    | def a_func():
+    |     a = 1
+    |     b, c = new_func(a)                             # [1]
+    |     print b, c
+    |
+    | def new_func(a):                                   # [2]
+    |     b = 2 * a                                      # [2]
+    |     c = a * 2 + b * 3                              # [2]
+    |     return b, c                                    # [2]
 "
   (interactive "sMethod name: \nr")
   (traad--extract-core "/refactor/extract_method" name begin end))
@@ -1072,34 +1072,34 @@ After performing extract method we'll have:
 
 For example, take this code:
 
-     my_var = 1 * 2 * 3 * 4
+    | my_var = 1 * 2 * 3 * 4
 
 ${region_start} and ${region_end} show the selected region for
 extraction:
 
-     my_var = ${region_start}1 * 2 * 3${region_end} * 4
+    | my_var = ${region_start}1 * 2 * 3${region_end} * 4
 
 Extracting to a new variable, `another_var`, gives:
 
-     another_var = 1 * 2 * 3
-     my_var = another_var * 4
+    | another_var = 1 * 2 * 3
+    | my_var = another_var * 4
 
 Traad will _not_ try to replace similar expressions with the new
 variable. For example, if we have:
 
-     my_var = 1 * 2 * 3 * 4
-     similar_var = 1 * 2 * 3                             # [1]
+    | my_var = 1 * 2 * 3 * 4
+    | similar_var = 1 * 2 * 3                            # [1]
 
 And we extract the following:
 
-     my_var = ${region_start}1 * 2 * 3${region_end} * 4
-     similar_var = 1 * 2 * 3                             # [1]
+    | my_var = ${region_start}1 * 2 * 3${region_end} * 4
+    | similar_var = 1 * 2 * 3                            # [1]
 
 Extracting to `another_var` gives:
 
-     another_var = 1 * 2 * 3
-     my_var = another_var * 4
-     similar_var = 1 * 2 * 3                             # [1]
+    | another_var = 1 * 2 * 3
+    | my_var = another_var * 4
+    | similar_var = 1 * 2 * 3                            # [1]
 
 The expression at [1] will not be replaced with a reference to the
 new variable.
@@ -1113,16 +1113,16 @@ new variable.
 
 This is the preferred structure:
 
-     [__future__ imports]
+    [__future__ imports]
 
-     [standard imports]
+    [standard imports]
 
-     [third-party imports]
+    [third-party imports]
 
-     [project imports]
+    [project imports]
 
 
-     [the rest of module]
+    [the rest of module]
 "
   (interactive
    (list
@@ -1143,28 +1143,28 @@ For example, let's say we have two files, 'mod1.py' and
 'mod2.py'. They look as follows:
 
     mod1.py:
-     def some_function():
-         return True
-
-     my_var = 1
+    | def some_function():
+    |     return True
+    |
+    | my_var = 1
 
     mod2.py:
-     from some_mod import *                              # [1]
-
-     my_var = some_function()
+    | from some_mod import *                             # [1]
+    |
+    | my_var = some_function()
 
   Expanding star imports in 'mod2.py' gives:
 
     mod1.py:
-     def some_function():
-         return True
-
-     my_var = 1
+    | def some_function():
+    |     return True
+    |
+    | my_var = 1
 
     mod2.py:
-     from some_mod import some_function                  # [1]
-
-     my_var = some_function()
+    | from some_mod import some_function                 # [1]
+    |
+    | my_var = some_function()
 
 Note that it treats the new assignment of my_var as though it is
 creating a variable local to 'mod2.py'.
@@ -1183,15 +1183,15 @@ creating a variable local to 'mod2.py'.
 
 For example:
 
-     from mod1 import some_function
-
-     my_var = some_function()
+    | from mod1 import some_function
+    |
+    | my_var = some_function()
 
 becomes:
 
-     import mod1
-
-     my_var = mod1.some_function()
+    | import mod1
+    |
+    | my_var = mod1.some_function()
 "
   (interactive
    (list
@@ -1220,11 +1220,11 @@ becomes:
 Handle long imports command tries to make long imports look
 better. It attempts to transform imports like this:
 
-     import pkg1.pkg2.pkg3.pkg4.mod1
+    import pkg1.pkg2.pkg3.pkg4.mod1
 
 into:
 
-     from pkg1.pkg2.pkg3.pkg4 import mod1
+    from pkg1.pkg2.pkg3.pkg4 import mod1
 
 Long imports can be identified either by having lots of dots or
 being very long. The default configuration considers imported
