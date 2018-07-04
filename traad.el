@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 3.1.1
 ;; URL: https://github.com/abingham/traad
-;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123"))
+;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123") (f "0.20.0"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -55,6 +55,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'f)
 (require 'dash)
 (require 'deferred)
 (require 'json)
@@ -349,6 +350,10 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-auto-import ()
+  "Automatically add the necessary import for the current symbol.
+
+Displays a list of potential imports - the user must select the
+correct one."
   (interactive)
 
   (when (traad--all-changes-saved)
@@ -390,7 +395,82 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun* traad-rename (new-name &key (docstrings t) (in-hierarchy t))
-  "Rename the object at the current location."
+  "Rename the object at the current location.
+
+Attempts to rename all occurrences of the object in the project.
+
+Note that this will avoid renaming certain occurrences, as
+follows:
+
+  - Occurrences in comments/docstrings will not be renamed. For
+    example, let's say we're renaming a variable,
+    `var_to_rename`:
+
+    | var_to_rename = 'this is a string'                 # [1]
+    |
+    | some_variable = var_to_rename                      # [2]
+    |
+    | # This is an occurrence of `var-to-rename`         # [3]
+    |
+    | def some_function(input_var):
+    |     '''Docstring that has `var_to_rename` in it.'''# [4]
+    |     return input_var ** 2
+    |
+    | some_function(var_to_rename)                       # [5]
+
+    Renaming `var_to_rename` to `new_var_name`, this would
+    become:
+
+    | new_var_name = 'this is a string'                  # [1]
+    |
+    | some_variable = new_var_name                       # [2]
+    |
+    | # This is an occurrence of `var-to-rename`         # [3]
+    |
+    | def some_function(input_var):
+    |     '''Docstring that has `var_to_rename` in it.'''# [4]
+    |     return input_var ** 2
+    |
+    | some_function(new_var_name)                        # [5]
+
+    Note that [1], [2] & [5] were renamed, but [3] &
+    [4] (occurrences in a comment and a docstring) were not
+    renamed.
+
+  - Occurrences higher and lower in the hierarchy (i.e. the
+    same method in a subclass or superclass) will not be renamed.
+    For example, let's say you're renaming some method,
+    `method_to_rename`:
+
+    | class BaseClass(object):
+    |     def method_to_rename():                        # [1]
+    |         print('This is the super class.')
+    |
+    | class DerivedClass(BaseClass):
+    |     def method_to_rename():                        # [2]
+    |         print('This is the derived class.')
+
+    Renaming `BaseClass.method_to_rename` to
+    `BaseClass.new_name`, results in:
+
+    | class BaseClass(object):
+    |     def new_name():                                # [1]
+    |         print('This is the super class.')
+    |
+    | class DerivedClass(BaseClass):
+    |     def method_to_rename():                        # [2]
+    |         print('This is the derived class.')
+
+    The original method, [1], is renamed. Note that the override
+    method in the subclass, [2], does not get renamed.
+
+  - Unsure occurrences will not be renamed. Rope may find
+    occurrences that it is unsure about, which are marked as
+    `unsure`. These will generally be wrong, so you don't want to
+    include them all. However, this means you may miss some
+    occurrences of the object. See the Rope documentation for
+    more details on the `unsure` parameter.
+"
   (interactive
    (list
     (read-string "New name: ")))
@@ -417,7 +497,10 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-rename-module (new-name)
-  "Rename the current module."
+  "Rename the currently opened module.
+
+Note that this renames the module associated with the current
+buffer, NOT the module under point."
   (interactive
    (list
     (read-string "New name: ")))
@@ -437,7 +520,10 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-move ()
-  "Call the correct form of `move` based on the type of thing at the point."
+  "Move the current object (DWIM).
+
+Calls the correct form of `move` based on the type of thing at
+the point."
   (interactive)
   (pcase (traad-thing-at (point))
     ('module (call-interactively 'traad-move-module))
@@ -447,7 +533,9 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-move-global (dest)
-  "Move the object at the current location to dest."
+  "Move the object at the current location to file `DEST'.
+
+Prompts for a `DEST' when called interactively."
   (interactive
    (list
     (read-file-name "Destination file: " nil nil "confirm")))
@@ -460,7 +548,12 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-move-module (dest)
-  "Move the object at the current location to dest."
+  "Move the current module to file `DEST'.
+
+Prompts for a `DEST' when called interactively.
+
+Note that this moves the currently *open* module, not the module
+under point."
   (interactive
    (list
     (read-directory-name "Destination directory: " nil nil "confirm")))
@@ -481,7 +574,53 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-normalize-arguments ()
-  "Normalize the arguments for the method at point."
+  "Normalize the arguments for the method at point.
+
+This refactors all calls to this function to ensure the variables
+are called in the correct order. It also removes explicit
+references to keyword arguments whenever possible, replacing them
+with positional references. For example, given the following:
+
+    | def this_is_a_test(a, b, c=5):
+    |     return [a, b, c]
+    |
+    | this_is_a_test(a=10, b=10, c=20)
+    | this_is_a_test(20, 20, c=10)
+    | this_is_a_test('a', 'b', 'c')
+    | this_is_a_test(b='b', c='c', a='a')
+    | this_is_a_test(a='a', b='b')
+
+Calling `traad-normalize-arguments' on `this_is_a_test`, it would
+become:
+
+    | def this_is_a_test(a, b, c=5):
+    |     return [a, b, c]
+    |
+    | this_is_a_test(10, 10, 20)
+    | this_is_a_test(20, 20, 10)
+    | this_is_a_test('a', 'b', 'c')
+    | this_is_a_test('a', 'b', 'c')
+    | this_is_a_test('a', 'b')
+
+Note that the arguments in [1] were reordered. A more complex
+case would be:
+
+    | def longer_function(a, b, c=10, d=20):
+    |     return [a, b, c, d]
+    |
+    | longer_function(a='a', b='b', d='d')
+
+Calling `traad-normalize-arguments' on `longer_function`, it
+would become:
+
+    | def longer_function(a, b, c=10, d=20):
+    |     return [a, b, c, d]
+    |
+    | longer_function('a', 'b', d='d')
+
+It cannot remove the keyword reference to `d`, so \"d='d'\" is
+retained.
+"
   (interactive)
   (traad--fetch-perform-refresh
    (buffer-file-name)
@@ -491,7 +630,46 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-remove-argument (index)
-  "Remove the INDEXth argument from the signature at point."
+  "Remove the `INDEX'th argument from the signature at point.
+
+Also attempts to remove it from any calls to this function.
+
+For example, let's say we have the following:
+
+    | def some_function(arg1, arg2, arg3=10, arg4='some string'):
+    |     '''Do something to some arbitrary parameters.'''
+    |     first_half = [arg1, arg2]
+    |     second_half = [arg3, arg4]
+    |     return first_half, second_half
+    |
+    | some_function(1, 2, arg3=3, arg4='four')
+
+Calling `traad-remove-argument' on `some_function` with an
+`INDEX' of 2, this would become:
+
+    | def some_function(arg1, arg2, arg4='some string'):
+    |     '''Do something to some arbitrary parameters.'''
+    |     first_half = [arg1, arg2]
+    |     second_half = [arg3, arg4]                     # [1]
+    |     return first_half, second_half
+    |
+    | some_function(1, 2, 'four')                        # [2]
+
+It has removed the third argument, `arg3`.
+
+Note:
+
+  - The index counts from zero, so an index of 0 means the first
+    argument and an index of 2 means the _third_ argument.
+
+  - It does not remove internal references to the argument (e.g.
+    [1]) in the function logic.
+
+  - References to the function also have their function call
+    normalised. See [2], where the explicit keyword reference was
+    removed in favour of a positional reference. See
+    `traad-normalize-arguments' for more information.
+"
   (interactive
    (list
     (read-number "Index: ")))
@@ -507,7 +685,66 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-add-argument (index name default value)
-  "Add a new argument at `index' in the signature at point."
+  "Add a new argument at `INDEX' in the signature at point.
+
+Takes the following arguments:
+
+  `INDEX'   - The index to add the argument at. Note that this
+              is zero-indexed, so an index of 1 will insert it
+              as the _second_ argument.
+  `NAME'    - The name of the argument.
+  `DEFAULT' - The default value of the argument.
+  `VALUE'   - The value to insert for this argument in any
+              existing calls to this function.
+
+For example, let's say we have the following:
+
+    | def some_function(arg1, arg2, arg3=10, arg4='some string'):
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 2, arg3=3, arg4='four')
+
+Let's call `traad-add-argument' on some_function. We'll supply
+the following arguments:
+
+`INDEX'   = 3
+`NAME'    = \"new_arg\"
+`DEFAULT' = 30
+`VALUE'   = 50
+
+This will become:
+
+    | def some_function(arg1, arg2, arg3=10, new_arg=30, arg4='some string'):
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 2, 3, 50, 'four')                 # [1]
+
+Note that references to the function also have their function
+call normalised. See [1], where the explicit keyword reference
+was removed in favour of a positional reference. See
+`traad-normalize-arguments' for more information.
+
+Arguments are always added as keyword arguments. Rope does not
+discriminate based on position, so you can add keyword arguments
+out-of-order. For example, back to the original function:
+
+    | def some_function(arg1, arg2, arg3=10, arg4='some string'):
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 2, arg3=3, arg4='four')
+
+Adding the same argument as before at `INDEX' = 1, this will
+become:
+
+    | def some_function(arg1, new_arg=30, arg2, arg3=10, arg4='some string'):# [1]
+    |     return [arg1, arg2, arg3, arg4]
+    |
+    | some_function(1, 50, 2, 3, 'four')
+
+Watch line [1]. Note that the sequence argument `arg2` now
+appears after `new_arg`, a keyword argument, so the function
+signature is no longer valid.
+"
   (interactive
    (list
     (read-number "Index: ")
@@ -526,6 +763,77 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-inline ()
+  "Inline this object (replace the object with the thing it represents.)
+
+Inlining can be performed on many objects.
+
+Functions:
+
+  Inlining a function replaces calls to a function with the
+  explicit code the function executes. For example:
+
+    | def do_something():
+    |     print sys.version
+    |     return C()
+
+  Inlining `do_something`, becomes:
+
+    | print sys.version
+    | return C()
+
+  Methods, etc. can also be inlined. For example:
+
+    | class C(object):
+    |     var = 1
+    |
+    |     def f(self, p):                                # [1]
+    |         result = self.var + pn                     # [1]
+    |         return result                              # [1]
+    |
+    | c = C()
+    | x = c.f(1)                                         # [2]
+
+  Inlining `C.f`, becomes:
+
+    | class C(object):
+    |     var = 1
+    |
+    | c = C()
+    | result = c.var + pn                                # [2]
+    | x = result                                         # [2]
+
+Parameters:
+
+  Inlning a parameter passes the default value of a keyword
+  parameter whenever the parameter is not explicitly referenced.
+  For example:
+
+    | def f(p1=1, p2=2):
+    |     pass
+    |
+    | f(3, 2)
+    | f()                                                # [1]
+    | f(3)                                               # [2]
+    | f(p1=5, p2=7)                                      # [3]
+
+  Inlining `p2`, becomes:
+
+    | def f(p1=1, p2=2):
+    |     pass
+    |
+    | f(3, 2)
+    | f(p2=2)                                            # [1]
+    | f(3, 2)                                            # [2]
+    | f(5, 7)                                            # [3]
+
+[1] and [2] have had explicit calls to the keyword argument
+added. Note that:
+
+  - It prefers positional over keyword calls.
+
+  - It also normalizes the arguments, so [3] is affected. See
+    `traad-normalize-arguments' for more information.
+"
   (interactive)
   (traad--fetch-perform-refresh
    (buffer-file-name)
@@ -536,6 +844,26 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-introduce-parameter (parameter)
+  "Introduce a parameter in a function.
+
+This extracts a hard-coded value in a function, and introduces it
+as a parameter. An example may be clearer. Let's say we have:
+
+    | def multiply(value):
+    |     result = value * 2
+    |     return result
+    |
+    | my_var = multiply(10)
+
+Let's call `traad-introduce-parameter' when the cursor is on '2'
+and with `PARAMETER' = \"multiplier\". It will become:
+
+    | def multiply(value, multiplier=2):
+    |     result = value * 2
+    |     return result
+    |
+    | my_var = multiply(10)
+"
   (interactive
    (list
     (read-string "Parameter: ")))
@@ -550,6 +878,38 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-encapsulate-field ()
+  "Introduce getters and setters and use them instad of references.
+
+For example:
+
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.my_var = 1
+    |
+    | my_class = MyClass()
+    | print(my_class.my_var)                             # [1]
+    | my_class.my_var = 5                                # [2]
+
+Note that [1] is a get operation. [2] is a set operation.
+Encapsulating the field `MyClass.my_var` this becomes:
+
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.my_var = 1
+    |
+    |     def get_my_var(self):
+    |         return self.my_var
+    |
+    |     def set_my_var(self, value):
+    |         self.my_var = value
+    |
+    | my_class = MyClass()
+    | print(my_class.get_my_var())                       # [1]
+    | my_class.set_my_var(5)                             # [2]
+
+Note that [1] and [2] have had the getters and setters inserted
+automatically.
+"
   (interactive)
   (traad--fetch-perform-refresh
    (buffer-file-name)
@@ -560,6 +920,47 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-local-to-field ()
+  "Turns a local variable into a field variable.
+
+In other words, toggles the 'self' keyword or similar. Some
+examples may be clearer.
+
+Let's say we have:
+
+    | class MyClass(object):
+    |     def __init__(self):
+    |         some_var = 1
+    |         another_var = some_var * 2
+
+  Calling `local-to-field' on `some_var`, it becomes:
+
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.some_var = 1
+    |         another_var = self.some_var * 2
+
+Note that the refactoring is only performed on the variable in
+scope, not on other occurrences of the name. For example, if we
+have:
+
+    | class MyClass(object):
+    |     def __init__(self):
+    |         some_var = 1
+    |         another_var = some_var * 2
+    |
+    |     def do_something(self):
+    |         some_var = 200
+
+  Calling `local-to-field' on `some_var`, it becomes:
+
+    | class MyClass(object):
+    |     def __init__(self):
+    |         self.some_var = 1
+    |         another_var = self.some_var * 2
+    |
+    |     def do_something(self):
+    |         some_var = 200
+"
   (interactive)
   (traad--fetch-perform-refresh
    (buffer-file-name)
@@ -570,6 +971,51 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-use-function ()
+  "Tries to find the places in which a function can be used and
+changes the code to call it instead.
+
+For example, let's say we have the following code:
+
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = 3 ** 2                                    # [1]
+    |
+    | another_var = 4 ** 2                               # [2]
+
+  Performing 'use function' on `square`, becomes:
+
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = square(3)                                 # [1]
+    |
+    | another_var = square(4)                            # [2]
+
+It also works across files. Let's say we have two files,
+'mod1.py' and 'mod2.py'. They look as follows:
+
+    mod1.py:
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = 3 ** 2                                    # [1]
+
+    mod2.py:
+    | another_var = 4 ** 2                               # [2]
+
+  Performing 'use function' on `square`, the two files become:
+
+    mod1.py:
+    | def square(p):
+    |     return p ** 2
+    |
+    | my_var = square(3)                                 # [1]
+
+    mod2.py:
+    | import mod1                                        # [2]
+    | another_var = mod1.square(4)                       # [2]
+"
   (interactive)
   (traad--fetch-perform-refresh
    (buffer-file-name)
@@ -590,19 +1036,109 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-extract-method (name begin end)
-  "Extract the currently selected region to a new method."
+  "Extract the currently selected region to a new method.
+
+Here are some examples from the Rope documentation.
+${region_start} and ${region_end} show the selected region for
+extraction:
+
+    | def a_func():
+    |     a = 1
+    |     b = 2 * a
+    |     c = ${region_start}a * 2 + b * 3${region_end}  # [1]
+
+After performing extract method (supplying the name `new_func`)
+we'll have:
+
+    | def a_func():
+    |     a = 1
+    |     b = 2 * a
+    |     c = new_func(a, b)                             # [1]
+    |
+    | def new_func(a, b):                                # [2]
+    |     return a * 2 + b * 3                           # [2]
+
+For multi-line extractions if we have:
+
+    | def a_func():
+    |     a = 1
+    |     ${region_start}b = 2 * a                       # [1]
+    |     c = a * 2 + b * 3${region_end}                 # [1]
+    |     print b, c
+
+After performing extract method we'll have:
+
+    | def a_func():
+    |     a = 1
+    |     b, c = new_func(a)                             # [1]
+    |     print b, c
+    |
+    | def new_func(a):                                   # [2]
+    |     b = 2 * a                                      # [2]
+    |     c = a * 2 + b * 3                              # [2]
+    |     return b, c                                    # [2]
+"
   (interactive "sMethod name: \nr")
   (traad--extract-core "/refactor/extract_method" name begin end))
 
 ;;;###autoload
 (defun traad-extract-variable (name begin end)
-  "Extract the currently selected region to a new variable."
+  "Extract the currently selected region to a new variable.
+
+For example, take this code:
+
+    | my_var = 1 * 2 * 3 * 4
+
+${region_start} and ${region_end} show the selected region for
+extraction:
+
+    | my_var = ${region_start}1 * 2 * 3${region_end} * 4
+
+Extracting to a new variable, `another_var`, gives:
+
+    | another_var = 1 * 2 * 3
+    | my_var = another_var * 4
+
+Traad will _not_ try to replace similar expressions with the new
+variable. For example, if we have:
+
+    | my_var = 1 * 2 * 3 * 4
+    | similar_var = 1 * 2 * 3                            # [1]
+
+And we extract the following:
+
+    | my_var = ${region_start}1 * 2 * 3${region_end} * 4
+    | similar_var = 1 * 2 * 3                            # [1]
+
+Extracting to `another_var` gives:
+
+    | another_var = 1 * 2 * 3
+    | my_var = another_var * 4
+    | similar_var = 1 * 2 * 3                            # [1]
+
+The expression at [1] will not be replaced with a reference to the
+new variable.
+"
   (interactive "sVariable name: \nr")
   (traad--extract-core "/refactor/extract_variable" name begin end))
 
 ;;;###autoload
 (defun traad-organize-imports (filename)
-  "Organize the import statements in `filename'."
+  "Organize the import statements in `filename' according to pep8.
+
+This is the preferred structure:
+
+    [__future__ imports]
+
+    [standard imports]
+
+    [third-party imports]
+
+    [project imports]
+
+
+    [the rest of module]
+"
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
@@ -613,7 +1149,41 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-expand-star-imports (filename)
-  "Expand * import statements in `filename'."
+  "Expand * import statements in `filename'.
+
+This replaces 'import *' with explicit references to the objects
+used in the module.
+
+For example, let's say we have two files, 'mod1.py' and
+'mod2.py'. They look as follows:
+
+    mod1.py:
+    | def some_function():
+    |     return True
+    |
+    | my_var = 1
+
+    mod2.py:
+    | from some_mod import *                             # [1]
+    |
+    | my_var = some_function()
+
+  Expanding star imports in 'mod2.py' gives:
+
+    mod1.py:
+    | def some_function():
+    |     return True
+    |
+    | my_var = 1
+
+    mod2.py:
+    | from some_mod import some_function                 # [1]
+    |
+    | my_var = some_function()
+
+Note that it treats the new assignment of my_var as though it is
+creating a variable local to 'mod2.py'.
+"
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
@@ -624,7 +1194,20 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-froms-to-imports (filename)
-  "Convert 'from' imports to normal imports in `filename''."
+  "Convert 'from' imports to normal imports in `filename'.
+
+For example:
+
+    | from mod1 import some_function
+    |
+    | my_var = some_function()
+
+becomes:
+
+    | import mod1
+    |
+    | my_var = mod1.some_function()
+"
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
@@ -639,6 +1222,7 @@ necessary. Return the history buffer."
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
+  ;; TODO: Find some examples and put them in the docstring.
   (traad--fetch-perform-refresh
    (buffer-file-name)
    "/imports/relatives_to_absolutes"
@@ -646,7 +1230,22 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-handle-long-imports (filename)
-  "Clean up long import statements in `filename'."
+  "Transform long imports into 'from' imports in `filename'.
+
+Handle long imports command tries to make long imports look
+better. It attempts to transform imports like this:
+
+    import pkg1.pkg2.pkg3.pkg4.mod1
+
+into:
+
+    from pkg1.pkg2.pkg3.pkg4 import mod1
+
+Long imports can be identified either by having lots of dots or
+being very long. The default configuration considers imported
+modules with more than 2 dots or with more than 27 characters to
+be long.
+"
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
@@ -657,6 +1256,18 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-imports-super-smackdown (filename)
+  "Apply all the import reformatting commands Traad provides.
+
+Applies the following commands (in order):
+(
+  `traad-expand-star-imports'
+  `traad-relatives-to-absolutes'
+  `traad-froms-to-imports'
+  `traad-handle-long-imports'
+  `traad-organize-imports'
+)
+See each of these commands for full documentation.
+"
   (interactive
    (list
     (read-file-name "Filename: " (buffer-file-name))))
@@ -834,7 +1445,7 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-thing-at (pos)
-  "Get the type of the Python thing at `pos'."
+  "Get the type of the Python thing at `POS'."
   (interactive "d")
   (let* ((data (list (cons "offset" (traad--adjust-point pos))
                      (cons "path" (buffer-file-name))))
@@ -853,7 +1464,7 @@ necessary. Return the history buffer."
 
 ;;;###autoload
 (defun traad-code-assist (pos)
-  "Get possible completions at POS in current buffer.
+  "Get possible completions at `POS' in current buffer.
 
 This returns an alist like ((completions . [[name documentation scope type]]) (result . \"success\"))"
   (interactive "d")
@@ -884,8 +1495,8 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 (defun traad-get-calltip (pos)
   "Get the calltip for an object.
 
-  Returns a deferred which produces the calltip string.
-  "
+Returns a deferred which produces the calltip string.
+"
   (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
                             (cons "path" (buffer-file-name)))))
     (deferred:$
@@ -916,6 +1527,7 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 
 ;;;###autoload
 (defun traad-popup-calltip (pos)
+  "Display calltip for an object in a popup."
   (interactive "d")
   (lexical-let ((pos pos))
     (deferred:$
@@ -930,9 +1542,9 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 (defun traad--get-doc (pos)
   "Get docstring for an object.
 
-  Returns a deferred which produces the doc string. If there is
-  not docstring, the deferred produces nil.
-  "
+Returns a deferred which produces the doc string. If there is not
+docstring, the deferred produces nil.
+"
   (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
                             (cons "path" (buffer-file-name)))))
     (deferred:$
@@ -965,6 +1577,7 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 
 ;;;###autoload
 (defun traad-popup-doc (pos)
+  "Display docstring for an object in a popup."
   (interactive "d")
   (lexical-let ((pos pos))
     (deferred:$
@@ -981,7 +1594,7 @@ This returns an alist like ((completions . [[name documentation scope type]]) (r
 
 ;;;###autoload
 (defun traad-kill-all ()
-  "Kill all traad servers and associatd buffers."
+  "Kill all traad servers and associated buffers."
   (interactive)
   (maphash
    (lambda (root server)
@@ -1048,8 +1661,8 @@ This will start a new server if necessary.
 (defun traad--construct-url (for-path location)
   "Construct a URL to a specific location on the traad server.
 
-  In short: http://server_host:server_port<location>
-  "
+In short: http://server_host:server_port<location>
+"
   (let ((host (traad--get-host for-path)))
     (concat "http://" host location)))
 
@@ -1153,6 +1766,7 @@ refresh affected buffers."
      :data (encode-coding-string (json-encode data) 'utf-8))))
 
 (defun traad--range (upto)
+  "Construct a list of ints from 0 to `UPTO' inclusive."
   (defun range_ (x)
     (if (> x 0)
         (cons x (range_ (- x 1)))
@@ -1163,11 +1777,13 @@ refresh affected buffers."
   (map 'list 'cons (traad--range (length l)) l))
 
 (defun traad--adjust-point (p)
-  "Rope uses 0-based indexing, but Emacs points are 1-based."
+  "Rope uses 0-based indexing, but Emacs points are 1-based.
+
+(Converts from Emacs points to Rope points)"
   (- p 1))
 
 (defun traad--read-lines (path)
-  "Return a list of lines of a file at PATH."
+  "Return a list of lines of a file at `PATH'."
   (with-temp-buffer
     (insert-file-contents path)
     (split-string (buffer-string) "\n" nil)))
@@ -1185,7 +1801,11 @@ This installs the server into the `traad-environment-name'
 virtual environment, creating the virtualenv if necessary.
 
 By default, then, it installs traad into
-`PYTHON-ENVIRONMENT_DIRECTORY/traad`."
+`PYTHON-ENVIRONMENT_DIRECTORY/traad`.
+
+To install Traad for a different version of Python than the
+default, ensure the virtual environment exists (and is running
+that version of Python) before calling `traad-install-server'."
   (interactive)
   (ignore-errors
     (venv-mkvirtualenv traad-environment-name))
@@ -1217,6 +1837,7 @@ A changeset looks like this:
      change-contents)))
 
 (defun traad--join-path (a b)
+  "Join two paths. Joins the directory of `A' with `B'."
   (concat (file-name-as-directory a) b))
 
 (provide 'traad)
