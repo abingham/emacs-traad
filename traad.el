@@ -399,12 +399,13 @@ correct one."
 
 Attempts to rename all occurrences of the object in the project.
 
-Note that this will avoid renaming certain occurrences, as
-follows:
+Optional arguments `DOCSTRINGS' and `IN-HIERARCHY' set renaming
+options:
 
-  - Occurrences in comments/docstrings will not be renamed. For
-    example, let's say we're renaming a variable,
-    `var_to_rename`:
+  - `DOCSTRINGS' (default `t') specifies whether occurrences in
+    comments/docstrings should be renamed. For example, let's say
+    we're renaming a variable, `var_to_rename` and `DOCSTRINGS'
+    is set to `nil':
 
     | var_to_rename = 'this is a string'                 # [1]
     |
@@ -435,12 +436,15 @@ follows:
 
     Note that [1], [2] & [5] were renamed, but [3] &
     [4] (occurrences in a comment and a docstring) were not
+    renamed. If `DOCSTRINGS' were `t', [3] & [4] would have been
     renamed.
 
-  - Occurrences higher and lower in the hierarchy (i.e. the
-    same method in a subclass or superclass) will not be renamed.
-    For example, let's say you're renaming some method,
-    `method_to_rename`:
+  - `IN-HIERARCHY' (default `t') specifies whether occurrences
+    higher and lower in the hierarchy should be renamed. (In
+    practise this means the same method in a subclass or
+    superclass) For example, let's say you're renaming some
+    method, `method_to_rename`, and `IN-HIERARCHY' is set to
+    `nil':
 
     | class BaseClass(object):
     |     def method_to_rename():                        # [1]
@@ -462,14 +466,15 @@ follows:
     |         print('This is the derived class.')
 
     The original method, [1], is renamed. Note that the override
-    method in the subclass, [2], does not get renamed.
+    method in the subclass, [2], does not get renamed. If
+    `IN-HIERARCHY' were set to `t', [2] would also be renamed.
 
-  - Unsure occurrences will not be renamed. Rope may find
-    occurrences that it is unsure about, which are marked as
-    `unsure`. These will generally be wrong, so you don't want to
-    include them all. However, this means you may miss some
-    occurrences of the object. See the Rope documentation for
-    more details on the `unsure` parameter.
+Note that unsure occurrences will not be renamed. Rope may find
+occurrences that it is unsure about, which are marked as
+`unsure`. These will generally be wrong, so you don't want to
+include them all. However, this means you may miss some
+occurrences of the object. See the Rope documentation for more
+details on the `unsure` parameter.
 "
   (interactive
    (list
