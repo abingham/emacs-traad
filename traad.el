@@ -1265,169 +1265,424 @@ See each of these commands for full documentation.
            'traad-handle-long-imports
            'traad-organize-imports)))
 
-;; (defun traad-find-occurrences (pos)
-;;   "Get all occurences the use of the symbol at POS in the
-;; current buffer.
+(defun traad--findit-occurrences (pos)
+  "Get all occurences the use of the symbol at POS in the
+current buffer.
 
-;;   Returns a deferred request. The 'data' key in the JSON hold the
-;;   location data in the form:
+Returns a deferred request. The JSON response has two keys:
 
-;;  [[path, [region-start, region-stop], offset, unsure, lineno], . . .]
-;;   "
-;;   (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
-;;              (cons "path" (buffer-file-name)))))
-;;     (traad--deferred-request
-;;      "/findit/occurrences"
-;;      :data data
-;;      :type "POST")))
+((result . <\"success\" or \"failure\">)
+ (locations . <a list of location alists>))
 
-;; (defun traad-find-implementations (pos)
-;;   "Get the implementations of the symbol at POS in the current buffer.
+If `result' = \"success\", `locations' will hold a list of
+locations. Each location is an alist of the form:
 
-;;   Returns a deferred request. The 'data' key in the JSON hold the
-;;   location data in the form:
+((path     . <relative path to the location's file>)
+ (name     . <name of the location's file>)
+ (realpath . <the absolute path of the location's file>)
+ (region   . [<location start> <location end>])
+ (offset   . <the offset at which the location starts>)
+ (unsure   . <a json-false or json-true value>)
+ (lineno   . <the line number in the file>))
+"
+  (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
+                            (cons "path" (buffer-file-name)))))
+    (deferred:$
+      (traad--deferred-request
+       (buffer-file-name)
+       "/findit/occurrences"
+       :data data
+       :type "GET")
 
-;;  [[path, [region-start, region-stop], offset, unsure, lineno], . . .]
-;;   "
-;;   (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
-;;              (cons "path" (buffer-file-name)))))
-;;     (traad--deferred-request
-;;      "/findit/implementations"
-;;      :data data
-;;      :type "POST")))
+      (deferred:nextc it
+        (lambda (req)
+          (request-response-data req))))))
 
-;; (defun traad-find-definition (pos)
-;;   "Get location of a function definition.
+(defun traad--findit-implementations (pos)
+  "Get all implementations the use of the symbol at POS in the
+current buffer.
 
-;;   Returns a deferred request. The 'data' key in the JSON hold the location in
-;;   the form:
+Returns a deferred request. The JSON response has two keys:
 
-;;  [path, [region-start, region-stop], offset, unsure, lineno]
-;;   "
-;;   (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
-;;              (cons "path" (buffer-file-name)))))
-;;     (traad--deferred-request
-;;      "/findit/definition"
-;;      :data data
-;;      :type "POST")))
+((result . <\"success\" or \"failure\">)
+ (locations . <a list of location alists>))
 
-;; (defun traad-display-findit (pos func buff-name)
-;;   "Common display routine for occurrences and implementations.
+If `result' = \"success\", `locations' will hold a list of
+locations. Each location is an alist of the form:
 
-;;   Call FUNC with POS and fill up the buffer BUFF-NAME with the results."
-;;   (lexical-let ((buff-name buff-name))
-;;     (deferred:$
-;;                                         ; Fetch in parallel...
-;;       (deferred:parallel
+((path     . <relative path to the location's file>)
+ (name     . <name of the location's file>)
+ (realpath . <the absolute path of the location's file>)
+ (region   . [<location start> <location end>])
+ (offset   . <the offset at which the location starts>)
+ (unsure   . <a json-false or json-true value>)
+ (lineno   . <the line number in the file>))
+"
+  (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
+                            (cons "path" (buffer-file-name)))))
+    (deferred:$
+      (traad--deferred-request
+       (buffer-file-name)
+       "/findit/implementations"
+       :data data
+       :type "GET")
 
-;;                                         ; ...the occurrence data...
-;;         (deferred:$
-;;           (apply func (list pos))
-;;           (deferred:nextc it
-;;             'request-response-data)
-;;           (deferred:nextc it
-;;             (lambda (x) (assoc-default 'data x))))
+      (deferred:nextc it
+        (lambda (req)
+          (request-response-data req))))))
 
-;;                                         ; ...and the project root.
-;;         (deferred:$
-;;           (traad-get-root)
-;;           (deferred:nextc it
-;;             'request-response-data)
-;;           (deferred:nextc it
-;;             (lambda (x) (assoc-default 'root x)))))
+(defun traad--findit-definition (pos)
+  "Get location of a function definition.
 
-;;       (deferred:nextc it
-;;         (lambda (input)
-;;           (let ((locs (elt input 0)) ; the location vector
-;;                 (root (elt input 1)) ; the project root
-;;                 (buff (get-buffer-create buff-name))
-;;                 (inhibit-read-only 't))
-;;             (pop-to-buffer buff)
-;;             (erase-buffer)
+Returns a deferred request. The JSON response has two keys:
 
-;;                                         ; For each location, add a
-;;                                         ; line to the buffer.  TODO:
-;;                                         ; Is there a "dovector" we can
-;;                                         ; use? This is a bit fugly.
-;;             (mapcar
-;;              (lambda (loc)
-;;                (lexical-let* ((path (elt loc 0))
-;;                               (abspath (concat root "/" path))
-;;                               (lineno (elt loc 4))
-;;                               (code (nth (- lineno 1) (traad--read-lines abspath))))
-;;                  (insert-button
-;;                   (format "%s:%s: %s\n"
-;;                           path
-;;                           lineno
-;;                           code)
-;;                   'action (lambda (x)
-;;                             (goto-line
-;;                              lineno
-;;                              (find-file-other-window abspath))))))
-;;              locs)))))))
+((result . <\"success\" or \"failure\">)
+ (location . <a location alist>))
 
+If `result' = \"success\", `location' will hold one location in
+an alist of the form:
 
-;; ;;;###autoload
-;; (defun traad-display-occurrences (pos)
-;;   "Display all occurences the use of the symbol at POS in the
-;; current buffer."
-;;   (interactive "d")
-;;   (traad-display-findit pos 'traad-find-occurrences "*traad-occurrences*"))
+((path     . <relative path to the location's file>)
+ (name     . <name of the location's file>)
+ (realpath . <the absolute path of the location's file>)
+ (region   . [<location start> <location end>])
+ (offset   . <the offset at which the location starts>)
+ (unsure   . <a json-false or json-true value>)
+ (lineno   . <the line number in the file>))
+"
+  (lexical-let ((data (list (cons "offset" (traad--adjust-point pos))
+                            (cons "path" (buffer-file-name)))))
+    (deferred:$
+      (traad--deferred-request
+       (buffer-file-name)
+       "/findit/definition"
+       :data data
+       :type "GET")
 
-;; ;;;###autoload
-;; (defun traad-display-implementations (pos)
-;;   "Display all occurences the use of the symbol as POS in the
-;; current buffer."
-;;   (interactive "d")
-;;   (traad-display-findit pos 'traad-find-implementations "*traad-implementations*"))
+      (deferred:nextc it
+        (lambda (req)
+          (request-response-data req))))))
 
-;; ;;;###autoload
-;; (defun traad-goto-definition (pos)
-;;   "Go to the definition of the function as POS."
-;;   (interactive "d")
-;;   (deferred:$
-;;     (deferred:parallel
-;;       (deferred:$
-;;  (traad-find-definition pos)
-;;  (deferred:nextc it
-;;    'request-response-data)
-;;  (deferred:nextc it
-;;    (lambda (x) (assoc-default 'data x))))
-;;       (deferred:$
-;;  (traad-get-root)
-;;  (deferred:nextc it
-;;    'request-response-data)
-;;  (deferred:nextc it
-;;    (lambda (x) (assoc-default 'root x)))))
+(defun traad--extract-line (file-path line-no)
+  "Returns a string representing a particular line in a file."
+  (with-temp-buffer
+    (insert-file-contents file-path)
+    (goto-line line-no)
+    ;; (thing-at-point 'line) includes newlines at end of line.
+    (replace-regexp-in-string "\n" ""
+                              (thing-at-point 'line nil))))
 
-;;     (deferred:nextc it
-;;       (lambda (input)
-;;  (let ((loc (elt input 0)))
-;;    (if (not loc)
-;;        (message "No definition found.")
-;;      (letrec ((path (elt loc 0))
-;;           (root (elt input 1))
-;;           (abspath (if (file-name-absolute-p path) path (concat root "/" path)))
-;;           (lineno (elt loc 4)))
-;;        (goto-line
-;;         lineno
-;;         (find-file-other-window abspath)))))))))
+(defun traad--button-action-visit-location (&optional button)
+  "Command for a button in a findit results buffer.
 
-;; ;;;###autoload
-;; (defun traad-findit (type)
-;;   "Run a findit function at the current point."
-;;   (interactive
-;;    (list
-;;     (completing-read
-;;      "Type: "
-;;      (list "occurrences" "implementations" "definition"))))
-;;   (cond
-;;    ((equal type "occurrences")
-;;     (traad-display-occurrences (point)))
-;;    ((equal type "implementations")
-;;     (traad-display-implementations (point)))
-;;    ((equal type "definition")
-;;     (traad-goto-definition (point)))))
+This function visits a location."
+  (interactive)
+  (unless button
+    (setq button (button-at (point))))
+  (let ((filename (button-get button 'filename))
+        (offset (button-get button 'offset)))
+    (traad--visit-location-result filename offset)))
+
+(defun traad--button-action-preview-location (&optional button)
+  "Command for a button in a findit results buffer.
+
+This function previews a location."
+  (interactive)
+  (unless button
+    (setq button (button-at (point))))
+  (let ((filename (button-get button 'filename))
+        (offset (button-get button 'offset)))
+    (traad--preview-location-result filename offset)))
+
+(defvar traad--location-button-keymap (make-sparse-keymap)
+  "Sparse keymap to bind to buttons in findit results buffers.")
+(set-keymap-parent traad--location-button-keymap button-map)
+
+;; Bind the RET and TAB keys to interact with the button.
+(bind-map-set-keys traad--location-button-keymap
+  "RET" 'traad--button-action-visit-location
+  "TAB" 'traad--button-action-preview-location)
+
+;; (defvar traad--location-results-keymap (make-sparse-keymap)
+;;   "The keymap that should be active in location-results buffers")
+
+;; (define-minor-mode traad-location-results-mode
+;;   "Minor mode for buffers showing Traad location results."
+;;   :init-value nil
+;;   :lighter ""
+;;   :keymap traad--location-results-keymap)
+
+(defun traad--highlight-indentation (text)
+  "Replaces indentation in `TEXT' with interpuncts (·).
+
+`TEXT' should be a string representing a single line. It may not
+contain newlines. Interpuncts are used to make the indentation
+more obvious. Treats tabs as four characters.
+"
+  (when (string-match "\n" text)
+    (error (format "`traad-highlight-indentation' may not be called on a string containing newlines. String was: %s"
+                   text)))
+  ;; First replace leading spaces. Allow mixed tabs and spaces.
+  (while (string-match "^[·\t]*\\( \\)" text)
+    (setq text (replace-regexp-in-string "^[·\t]*\\( \\)"
+                                         (propertize "·" 'face 'font-lock-comment-face)
+                                         text nil nil 1)))
+  ;; Next replace leading tabs.
+  (while (string-match "^[·]*\\(\t\\)" text)
+    ;; TODO: Maybe adjust tab length based on user's settings?
+    (setq text (replace-regexp-in-string "^[·]*\\(\t\\)"
+                                         (propertize "····" 'face 'font-lock-comment-face)
+                                         text nil nil 1)))
+  text)
+
+(defun traad--insert-location (location &optional longest-name longest-lineno)
+  "Insert one location (with properties).
+
+Utility function for `traad--display-findit-locations'."
+  (let* ((lineno (assoc-default 'lineno location))
+         (offset (assoc-default 'offset location))
+         (unsure (traad--location-is-unsure location))
+         (region (assoc-default 'region location))
+         (realpath (assoc-default 'realpath location))
+         (path (assoc-default 'path location))
+         (name (assoc-default 'name location))
+         (name-format (concat "%" (if longest-name
+                                      (format "%s" longest-name)
+                                    "")
+                              "s"))
+         (lineno-format (concat "%" (if longest-lineno
+                                        (format "%s" longest-lineno)
+                                      "")
+                                "s"))
+         (location-format (concat name-format "  " lineno-format ":"))
+         (line-contents (traad--highlight-indentation
+                         (traad--extract-line realpath lineno))))
+    ;; Insert the file name and line number.
+    (insert (propertize (format location-format name lineno)
+                        'face 'italic))
+    ;; Turn the file name and line number into a button so the user can visit
+    ;; the location.
+    (make-text-button (line-beginning-position) (point)
+                      'action 'traad--button-action-visit-location
+                      'keymap traad--location-button-keymap
+                      'face 'button
+                      'filename realpath
+                      'offset offset
+                      'help-echo "TAB: Preview result.  RET: Visit result.")
+    ;; Label unsure occurrences with a question mark.
+    (if unsure
+        (insert " ? ")
+      (insert "   "))
+    ;; Now insert the actual line.
+    (insert line-contents)
+    (insert "\n")))
+
+(defun traad--preview-location-result (filename offset)
+  "Preview a location result.
+
+This shows the location result without closing this window."
+  (let ((original-window (selected-window)))
+    (find-file-other-window filename)
+    (goto-char (traad--adjust-point-back offset))
+    ;; Small fix for movements within same file with active region.
+    (deactivate-mark)
+    ;; Recentering on the result makes the location clearer.
+    (recenter)
+    (select-window original-window)))
+
+(defun traad--visit-location-result (filename offset)
+  "Visit a location result in the other window."
+  (let ((original-window (selected-window)))
+    (find-file-other-window filename)
+    (goto-char (traad--adjust-point-back offset))
+    ;; Small fix for movements within same file with active region.
+    (deactivate-mark)
+    ;; Recentering on the result makes the location clearer.
+    (recenter)
+    ;; Finally bury the results buffer.
+    (let ((new-window (selected-window)))
+      (select-window original-window)
+      (bury-buffer)
+      (select-window new-window))))
+
+(defun traad--insert-location-headers (longest-name longest-lineno)
+  "Insert the headers for a list of locations."
+  (let* ((name-format (concat "%" (format "%s" longest-name) "s"))
+         (lineno-format (concat "%" (format "%s" longest-lineno) "s"))
+         (headers-format (concat name-format "  " lineno-format "    %s")))
+    (insert (propertize (format headers-format "File" "Line" "Result")
+                        'face 'bold))
+    (insert "\n")))
+
+(defun traad--json-truthy (json-value)
+  "Checks if a returned json value was truthy.
+
+JSON responses may return some `json-false' or `json-null' value
+instead of `nil', to distinguish between null and false in other
+languages. This symbol will be truthy, even though it represents
+a falsey value, so it must be decoded."
+  ;; Take the `json-false' and `json-null' values as falsey, otherwise use
+  ;; Emacs' default interpretation of truthinesss.
+  (cond ((eq json-value json-false)
+         nil)
+        ((eq json-value json-null)
+         nil)
+        (t (if json-value
+               t
+             nil))))
+
+(defun traad--location-is-unsure (location)
+  "Is the `LOCATION' object unsure?
+
+Also returns nil if the location has no 'unsure' attribute."
+  (let ((unsure-response (assoc-default 'unsure location)))
+    (traad--json-truthy unsure-response)))
+
+(defun traad--display-findit-locations (findit-type original-name locations &optional buff-name)
+  "Display a list of findit locations for the user.
+
+`FINDIT-TYPE' - The type of search (e.g. 'occurences',
+                'implementations'), as a symbol or string.
+`ORIGINAL-NAME' - The name of the original symbol being located.
+`LOCATIONS' - A list of location alists returned by the Traad
+              server.
+`BUFF-NAME' [OPTIONAL] - The name of the buffer that should be
+            used to display the locations. If not provided, a
+            name will be generated automatically."
+  (switch-to-buffer-other-window
+   ;; TODO: Maybe change this to a generic "*traad-locations*" name?
+   (get-buffer-create (or buff-name (format "*traad-%s*" findit-type))))
+  (read-only-mode 0)
+  (erase-buffer)
+  ;; TODO: Locally remap `keyboard-quit' to quit the buffer.
+  ;; TODO: Remap the motion keys to navigate between buttons. Define alias?
+  (insert (propertize (format "%s for '%s'\n"
+                              (capitalize (format "%s" findit-type))
+                              original-name)
+                      'face 'bold))
+  (insert (propertize "  Press `TAB' to preview result. Press `RET' to visit result and close.\n\n"
+                      'face 'font-lock-comment-face))
+  ;; Calculate some lengths for the different strings.
+  (let ((longest-name 0)
+        (longest-lineno 0)
+        (min-lineno-length 5)
+        (max-lineno-length 9)
+        (min-name-length 5)
+        (max-name-length 30))
+    ;; Work out which name is longest. All names should be aligned to the
+    ;; longest name. Do the same for the length of the line numbers.
+    (mapcar (lambda (location)
+              (let* ((name (assoc-default 'name location))
+                     (name-length (length name))
+                     (lineno (assoc-default 'lineno location))
+                     (lineno-length (length (format "%s" lineno))))
+                (when (> name-length longest-name)
+                  (setq longest-name name-length))
+                (when (> lineno-length longest-lineno)
+                  (setq longest-lineno lineno-length))))
+            locations)
+    ;; Name and line number padding should be neither too big nor too small.
+    (setq longest-name (max min-name-length
+                            (min longest-name
+                                 max-lineno-length)))
+    (setq longest-lineno (max min-lineno-length
+                              (min longest-lineno
+                                   min-lineno-length)))
+    (traad--insert-location-headers longest-name longest-lineno)
+    (let ((first-result-line (line-number-at-pos))  ; Keep track of the first result's position.
+          (has-unsure-locations nil))  ; Keep track of whether any results are unsure.
+      ;; Print each result. Skip unsure occurrences, but keep track of whether
+      ;; they exist. If no results are found, insert a "no results" message.
+      (or (mapcar (lambda (location)
+                    (if (traad--location-is-unsure location)
+                        (setq has-unsure-locations t)
+                      (traad--insert-location location longest-name longest-lineno)))
+                  locations)
+          (insert (propertize (format "No %s found." findit-type)
+                              'face 'italic)))
+      ;; List unsure results separately, and only if they exist.
+      (when has-unsure-locations
+        (insert (propertize "\nUnsure Matches:\n"
+                            'face 'bold))
+        (mapcar (lambda (location)
+                  (when (traad--location-is-unsure location)
+                    (traad--insert-location location longest-name longest-lineno)))
+                locations))
+      ;; Put the cursor back on the first result.
+      (goto-line first-result-line)))
+  (read-only-mode 1))
+
+(defun traad--findit-synchronous (pos findit-func)
+  "Apply a findit command synchronously."
+  (deferred:sync!
+    (apply findit-func pos)))
+
+;;;###autoload
+(defun traad-list-occurrences (pos)
+  "Return a list of occurrences for the object at `POS'.
+
+Useful for alternate displays, e.g. `helm'."
+  (traad--findit-synchronous pos 'traad--findit-occurrences))
+
+;;;###autoload
+(defun traad-list-implementations (pos)
+  "Return a list of implementatins for the object at `POS'.
+
+Useful for alternate displays, e.g. `helm'."
+  (traad--findit-synchronous pos 'traad--findit-implementations))
+
+;;;###autoload
+(defun traad-findit-definition-synchronous (pos)
+  "Return a list of possible definitions for the object at `POS'.
+
+Useful for alternate displays, e.g. `helm'."
+  (traad--findit-synchronous pos 'traad--findit-definition))
+
+(defun traad--findit (pos findit-func findit-type)
+  "Generic function to display locations from the findit module in Rope."
+  (lexical-let ((symbol-name (save-excursion
+                               (goto-char pos)
+                               (thing-at-point 'symbol))))
+    (deferred:$
+      (apply findit-func (list pos))
+      (deferred:nextc it
+        (lambda (res)
+          (if (string= (assoc-default 'result res) "success")
+              (let ((locations (assoc-default 'locations res)))
+                (traad--display-findit-locations findit-type symbol-name locations))
+            (user-error (format "Unable to find %s." findit-type))))))))
+
+;;;###autoload
+(defun traad-find-occurrences (pos)
+  "Finds and displays all potential occurrences of the current symbol."
+  (interactive "d")
+  (deferred:sync!
+    (traad--findit pos 'traad--findit-occurrences 'occurrences)))
+
+;;;###autoload
+(defun traad-find-implementations (pos)
+  "Finds and displays all potential implementations of the current symbol."
+  (interactive "d")
+  (traad--findit pos 'traad--findit-implementations 'implementations))
+
+;;;###autoload
+(defun traad-find-definition (pos)
+  "Finds and displays the definition of the current symbol.
+
+Note that this is not the same as `traad-goto-definition'. That
+method uses a different function."
+  (interactive "d")
+  (lexical-let ((symbol-name (save-excursion
+                               (goto-char pos)
+                               (thing-at-point 'symbol))))
+    (deferred:$
+      (traad--findit-definition pos)
+      (deferred:nextc it
+        (lambda (res)
+          (if (string= (assoc-default 'result res) "success")
+              (let ((location (assoc-default 'location res)))
+                (traad--display-findit-locations 'definition symbol-name (list location)))
+            (user-error (format "Unable to find definition."))))))))
 
 ;;;###autoload
 (defun traad-thing-at (pos)
@@ -1767,6 +2022,12 @@ refresh affected buffers."
 
 (Converts from Emacs points to Rope points)"
   (- p 1))
+
+(defun traad--adjust-point-back (p)
+  "Emacs uses 1-based indexing, but Rope uses 0-based indexing.
+
+(Converts from Rope points to Emacs points)"
+  (+ p 1))
 
 (defun traad--read-lines (path)
   "Return a list of lines of a file at `PATH'."
