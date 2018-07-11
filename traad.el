@@ -173,6 +173,12 @@ Returns `traad--server' struct.
            (t
             (incf cont)
             (when (< 30 cont) ; timeout after 3 seconds
+              ;; Kill the process so we don't accumulate idle processes.
+              (condition-case nil
+                  ;; Just kill the process, not the buffer. The buffer could
+                  ;; be useful for diagnostics on why there was a timeout.
+                  (kill-process proc)
+                (error nil))
               (error "Server timeout.")))))
         server))))
 
@@ -478,7 +484,7 @@ details on the `unsure` parameter.
 "
   (interactive
    (list
-    (read-string "New name: ")))
+    (read-string (format "Rename `%s' to: " (thing-at-point 'symbol)))))
   (traad--fetch-perform-refresh
    (buffer-file-name)
    "/refactor/rename"
@@ -508,7 +514,10 @@ Note that this renames the module associated with the current
 buffer, NOT the module under point."
   (interactive
    (list
-    (read-string "New name: ")))
+    (read-string (format "Rename `%s' to: "
+                         (file-name-sans-extension
+                          (file-name-nondirectory
+                           (buffer-file-name)))))))
   (deferred:$
     (traad--fetch-perform
      (buffer-file-name)
@@ -533,7 +542,7 @@ the point."
   (pcase (traad-thing-at (point))
     ('module (call-interactively 'traad-move-module))
     ('function (call-interactively 'traad-move-global))
-    (_ (call-interactively 'traad-move-moodule))))
+    (_ (call-interactively 'traad-move-module))))
 
 
 ;;;###autoload
@@ -1450,7 +1459,9 @@ See each of these commands for full documentation.
 
 ;;;###autoload
 (defun traad-thing-at (pos)
-  "Get the type of the Python thing at `POS'."
+  "Get the type of the Python thing at `POS'.
+
+When called interactively, displays the type."
   (interactive "d")
   (let* ((data (list (cons "offset" (traad--adjust-point pos))
                      (cons "path" (buffer-file-name))))
@@ -1465,7 +1476,18 @@ See each of these commands for full documentation.
                    :parser 'json-read
                    :data (json-encode data)
                    :type "POST"))))
-    (alist-get 'thing result)))
+    (let ((result (alist-get 'thing result)))
+      (when (called-interactively-p)
+        (let ((message-text (if result
+                                (format "Type of `%s': `%s'"
+                                        (save-excursion
+                                          (goto-char pos)
+                                          (thing-at-point 'symbol))
+                                        result)
+                              "No type found for thing at point.")))
+          (message message-text)
+          (popup-tip message-text)))
+      result)))
 
 ;;;###autoload
 (defun traad-code-assist (pos)
