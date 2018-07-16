@@ -1578,12 +1578,9 @@ a falsey value. This method decodes it."
             used to display the locations. If not provided, a
             name will be generated automatically."
   (switch-to-buffer-other-window
-   ;; TODO: Maybe change this to a generic "*traad-locations*" name?
    (get-buffer-create (or buff-name (format "*traad-%s*" findit-type))))
   (read-only-mode 0)
   (erase-buffer)
-  ;; TODO: Locally remap `keyboard-quit' to quit the buffer.
-  ;; TODO: Remap the motion keys to navigate between buttons. Define alias?
   (insert (propertize (format "%s for '%s'\n"
                               (capitalize (format "%s" findit-type))
                               original-name)
