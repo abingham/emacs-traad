@@ -1294,15 +1294,14 @@ See each of these commands for full documentation.
            'traad-organize-imports)))
 
 (defun traad--findit-occurrences (pos)
-  "Get all occurences the use of the symbol at POS in the
-current buffer.
+  "Get all occurences the use of the symbol at POS.
 
 Returns a deferred request. The JSON response has two keys:
 
 ((result . <\"success\" or \"failure\">)
  (locations . <a list of location alists>))
 
-If `result' = \"success\", `locations' will hold a list of
+If `result' is \"success\", `locations' will hold a list of
 locations. Each location is an alist of the form:
 
 ((path     . <relative path to the location's file>)
@@ -1327,15 +1326,14 @@ locations. Each location is an alist of the form:
           (request-response-data req))))))
 
 (defun traad--findit-implementations (pos)
-  "Get all implementations the use of the symbol at POS in the
-current buffer.
+  "Get all implementations the use of the symbol at POS.
 
 Returns a deferred request. The JSON response has two keys:
 
 ((result . <\"success\" or \"failure\">)
  (locations . <a list of location alists>))
 
-If `result' = \"success\", `locations' will hold a list of
+If `result' is \"success\", `locations' will hold a list of
 locations. Each location is an alist of the form:
 
 ((path     . <relative path to the location's file>)
@@ -1367,7 +1365,7 @@ Returns a deferred request. The JSON response has two keys:
 ((result . <\"success\" or \"failure\">)
  (location . <a location alist>))
 
-If `result' = \"success\", `location' will hold one location in
+If `result' is \"success\", `location' will hold one location in
 an alist of the form:
 
 ((path     . <relative path to the location's file>)
@@ -1392,7 +1390,7 @@ an alist of the form:
           (request-response-data req))))))
 
 (defun traad--extract-line (file-path line-no)
-  "Returns a string representing a particular line in a file."
+  "Extract a particular line in a file as a string."
   (with-temp-buffer
     (insert-file-contents file-path)
     (goto-line line-no)
@@ -1450,7 +1448,7 @@ more obvious. Treats tabs as four characters.
   (when (string-match "\n" text)
     (error (format "`traad-highlight-indentation' may not be called on a string containing newlines. String was: %s"
                    text)))
-  ;; First replace leading spaces. Allow mixed tabs and spaces.
+  ;; First replace leading spaces. (Allow mixed tabs and spaces.)
   (while (string-match "^[·\t]*\\( \\)" text)
     (setq text (replace-regexp-in-string "^[·\t]*\\( \\)"
                                          (propertize "·" 'face 'font-lock-comment-face)
@@ -1508,7 +1506,7 @@ Utility function for `traad--display-findit-locations'."
 (defun traad--preview-location-result (filename offset)
   "Preview a location result.
 
-This shows the location result without closing this window."
+This shows a location result without closing the current window."
   (let ((original-window (selected-window)))
     (find-file-other-window filename)
     (goto-char (traad--adjust-point-back offset))
@@ -1519,7 +1517,9 @@ This shows the location result without closing this window."
     (select-window original-window)))
 
 (defun traad--visit-location-result (filename offset)
-  "Visit a location result in the other window."
+  "Visit a location result in the other window.
+
+This also buries the current buffer."
   (let ((original-window (selected-window)))
     (find-file-other-window filename)
     (goto-char (traad--adjust-point-back offset))
@@ -1547,9 +1547,9 @@ This shows the location result without closing this window."
 
 JSON responses may return some `json-false' or `json-null' value
 instead of `nil', to distinguish between null and false in other
-languages. This symbol will be truthy, even though it represents
-a falsey value, so it must be decoded."
-  ;; Take the `json-false' and `json-null' values as falsey, otherwise use
+languages. This symbol may be truthy, even though it represents
+a falsey value. This method decodes it."
+  ;; Take the `json-false' and `json-null' values as falsey. Otherwise, use
   ;; Emacs' default interpretation of truthinesss.
   (cond ((eq json-value json-false)
          nil)
@@ -1562,7 +1562,7 @@ a falsey value, so it must be decoded."
 (defun traad--location-is-unsure (location)
   "Is the `LOCATION' object unsure?
 
-Also returns nil if the location has no 'unsure' attribute."
+(Also returns nil if the location has no 'unsure' attribute.)"
   (let ((unsure-response (assoc-default 'unsure location)))
     (traad--json-truthy unsure-response)))
 
@@ -1617,18 +1617,22 @@ Also returns nil if the location has no 'unsure' attribute."
                               (min longest-lineno
                                    min-lineno-length)))
     (traad--insert-location-headers longest-name longest-lineno)
-    (let ((first-result-line (line-number-at-pos))  ; Keep track of the first result's position.
-          (has-unsure-locations nil))  ; Keep track of whether any results are unsure.
-      ;; Print each result. Skip unsure occurrences, but keep track of whether
-      ;; they exist. If no results are found, insert a "no results" message.
+    ;; Store some values we'll need later.
+    (let (;; Keep track of the first result's position.
+          (first-result-line (line-number-at-pos))
+          ;; Keep track of whether any results are unsure.
+          (has-unsure-locations nil))
+      ;; Print each result. Unsure occurrences will be printed later. Skip them,
+      ;; but flag if they exist.
       (or (mapcar (lambda (location)
                     (if (traad--location-is-unsure location)
                         (setq has-unsure-locations t)
                       (traad--insert-location location longest-name longest-lineno)))
                   locations)
+          ;; If no results were found, insert a "no results" message.
           (insert (propertize (format "No %s found." findit-type)
                               'face 'italic)))
-      ;; List unsure results separately, and only if they exist.
+      ;; List unsure results separately.
       (when has-unsure-locations
         (insert (propertize "\nUnsure Matches:\n"
                             'face 'bold))
@@ -1667,7 +1671,13 @@ Useful for alternate displays, e.g. `helm'."
   (traad--findit-synchronous pos 'traad--findit-definition))
 
 (defun traad--findit (pos findit-func findit-type)
-  "Generic function to display locations from the findit module in Rope."
+  "Generic function to display locations from the findit module in Rope.
+
+`POS' - Position the findit function was called on (in the
+        current buffer).
+`FINDIT-FUNC' - The elisp findit function that should be called.
+`FINDIT-TYPE' - The type of findit command that was called. This
+                is used for display purposes."
   (lexical-let ((symbol-name (save-excursion
                                (goto-char pos)
                                (thing-at-point 'symbol))))
@@ -1682,14 +1692,14 @@ Useful for alternate displays, e.g. `helm'."
 
 ;;;###autoload
 (defun traad-find-occurrences (pos)
-  "Finds and displays all potential occurrences of the current symbol."
+  "Finds and displays all occurrences of the current symbol."
   (interactive "d")
   (deferred:sync!
     (traad--findit pos 'traad--findit-occurrences 'occurrences)))
 
 ;;;###autoload
 (defun traad-find-implementations (pos)
-  "Finds and displays all potential implementations of the current symbol."
+  "Finds and displays all implementations of the current symbol."
   (interactive "d")
   (traad--findit pos 'traad--findit-implementations 'implementations))
 
@@ -1697,8 +1707,14 @@ Useful for alternate displays, e.g. `helm'."
 (defun traad-find-definition (pos)
   "Finds and displays the definition of the current symbol.
 
-Note that this is not the same as `traad-goto-definition'. That
-method uses a different function."
+Note that this is not the same as `traad-goto-definition'.
+
+  - This function locates the definition with the `findit' module
+    from Rope. It does not jump to the definition.
+
+  - `traad-goto-definition' finds the definition with the
+    `code_assist' module from Rope. It jumps to the location of
+    the definition."
   (interactive "d")
   (lexical-let ((symbol-name (save-excursion
                                (goto-char pos)
