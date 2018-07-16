@@ -1445,9 +1445,6 @@ This function previews a location."
 contain newlines. Interpuncts are used to make the indentation
 more obvious. Treats tabs as four characters.
 "
-  (when (string-match "\n" text)
-    (error (format "`traad-highlight-indentation' may not be called on a string containing newlines. String was: %s"
-                   text)))
   ;; First replace leading spaces. (Allow mixed tabs and spaces.)
   (while (string-match "^[·\t]*\\( \\)" text)
     (setq text (replace-regexp-in-string "^[·\t]*\\( \\)"
