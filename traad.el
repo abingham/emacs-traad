@@ -5,7 +5,7 @@
 ;; Author: Austin Bingham <austin.bingham@gmail.com>
 ;; Version: 3.1.1
 ;; URL: https://github.com/abingham/traad
-;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123") (f "0.20.0"))
+;; Package-Requires: ((dash "2.13.0") (deferred "0.3.2") (popup "0.5.0") (request "0.2.0") (request-deferred "0.2.0") (virtualenvwrapper "20151123") (f "0.20.0") (bind-map "1.1.1"))
 ;;
 ;; This file is not part of GNU Emacs.
 ;;
@@ -63,6 +63,7 @@
 (require 'request)
 (require 'request-deferred)
 (require 'virtualenvwrapper)
+(require 'bind-map)
 
 (defcustom traad-save-unsaved-buffers 'ask
   "What to do when there are unsaved buffers before a refactoring.
