@@ -63,6 +63,7 @@
 (require 'request)
 (require 'request-deferred)
 (require 'virtualenvwrapper)
+(require 'bind-map)
 
 (defcustom traad-save-unsaved-buffers 'ask
   "What to do when there are unsaved buffers before a refactoring.
